@@ -7,6 +7,9 @@ name = "pypi"
 python-binance = "*"
 websocket-client = "*"
 
+[scripts]
+sniffer = "python src/socketSniffer.py" # example: pipenv run sniffer
+
 [dev-packages]
 
 [requires]
