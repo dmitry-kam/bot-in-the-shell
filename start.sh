@@ -6,4 +6,4 @@ alias pipenv=~/.local/bin/pipenv
 rm get-pip.py
 pipenv shell
 pipenv update
-apt install mariadb-server
+sudo apt install mariadb-server
