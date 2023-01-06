@@ -11,9 +11,9 @@ peewee = "3.15.4"
 [scripts]
 generateDocumentation="bash docs/generateDocumentation.sh"
 #commandName = "python src/socketSniffer.py" # example
-sniffer = {call = "src.socketSniffer:ws_trades()"}
-funcWithoutArgs = {call = "src.envExample:getEnvVars()"}
-funcWithArgs = {call = "src.envExample:argsCheck('arg1', 'arg2')"} # пример вызова функции с аргументами
+sniffer = {call = "sandbox.socketSniffer:ws_trades()"}
+funcWithoutArgs = {call = "sandbox.envExample:getEnvVars()"}
+funcWithArgs = {call = "sandbox.envExample:argsCheck('arg1', 'arg2')"} # пример вызова функции с аргументами
 
 [dev-packages]
 
