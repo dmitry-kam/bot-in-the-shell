@@ -7,13 +7,15 @@ name = "pypi"
 python-binance = "1.0.16"
 websocket-client = "1.4.2"
 peewee = "3.15.4"
+elasticsearch = "8.6.0"
+tqdm = "4.64.1"
 
 [scripts]
 generateDocumentation="bash docs/generateDocumentation.sh"
 #commandName = "python src/socketSniffer.py" # example
-sniffer = {call = "sandbox.socketSniffer:ws_trades()"}
-funcWithoutArgs = {call = "sandbox.envExample:getEnvVars()"}
-funcWithArgs = {call = "sandbox.envExample:argsCheck('arg1', 'arg2')"} # пример вызова функции с аргументами
+#sniffer = {call = "sandbox.socketSniffer:ws_trades()"}
+#funcWithoutArgs = {call = "sandbox.envExample:getEnvVars()"}
+#funcWithArgs = {call = "sandbox.envExample:argsCheck('arg1', 'arg2')"} # пример вызова функции с аргументами
 
 [dev-packages]
 

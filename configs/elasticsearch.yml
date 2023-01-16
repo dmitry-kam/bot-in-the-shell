@@ -1,0 +1,32 @@
+# ======================== Elasticsearch Configuration =========================
+cluster.initial_master_nodes: ["bot-virtual-machine"]
+
+# Allow HTTP API connections from anywhere
+# Connections are encrypted and require user authentication
+http.host: 127.0.0.1
+http.port: 9200
+network.host: 0.0.0.0
+discovery.seed_hosts: []
+#transport.host: 0.0.0.0
+node.name: BotNode1
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+
+readiness.port: 9399
+
+#----------------------- BEGIN SECURITY AUTO CONFIGURATION -----------------------
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+# Enable encryption for HTTP API client connections, such as Kibana, Logstash, and Agents
+#xpack.security.http.ssl:
+#  enabled: true
+#  keystore.path: certs/http.p12
+
+# Enable encryption and mutual authentication between cluster nodes
+#xpack.security.transport.ssl:
+#  enabled: true
+#  verification_mode: certificate
+#  keystore.path: certs/transport.p12
+#  truststore.path: certs/transport.p12
+
+#----------------------- END SECURITY AUTO CONFIGURATION -------------------------
