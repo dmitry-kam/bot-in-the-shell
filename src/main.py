@@ -8,8 +8,9 @@ from queue import Queue
 import hmac
 import time
 import hashlib
+import requests
 
-api_key, api_secret = os.environ['API_KEY'], os.environ['SECRET_KEY']
+api_key, api_secret, userdata_listenkey = os.environ['API_KEY'], os.environ['SECRET_KEY'], os.environ.get('USERDATA_LISTENKEY')
 step = 30
 def hashing(query):
     return hmac.new(
@@ -32,17 +33,17 @@ def makeString(dictionary):
     return res
 def makeOrderAndWait(price:float):
     request = {
-        'id':'testid1488',
+        'id':f'testid1488{n+1}',
         'method': 'order.place',
         'params': {
             'apiKey': api_key,
             'symbol': 'ETHUSDT',
-            'side': 'BUY',
+            'side': 'sell',
             'type': 'LIMIT',
-            'price': price,
+            'price': 1588.63000000,
             'timeInForce': 'GTC',
             'timestamp': get_timestamp(),
-            'quantity': round(step/price,3), #step = 30USDT, не нашёл способа, как при покупке указать сумму, на которую нужно купить
+            'quantity': round(3,3), #step = 30USDT, не нашёл способа, как при покупке указать сумму, на которую нужно купить
         }
     }
     r_signature = makeString(request['params'])
@@ -92,19 +93,37 @@ def init_listen():
 torders = Thread(target = orders)
 n = 0
 working = False
+def orders_status():
+    pingurl = f'https://testnet.binance.vision/api/v3/userDataStream'
+    def ping():
+        global userdata_listenkey
+        if not userdata_listenkey:
+            response = requests.post(pingurl, headers={'X-MBX-APIKEY': api_key})
+        print(response.text)
+        response_json = response.json()
+        if not userdata_listenkey:
+            userdata_listenkey = response_json['listenKey']
+            print('Got listenKey',userdata_listenkey)
+            os.environ['USERDATA_LISTENKEY'] = userdata_listenkey
+            os.environ['USERDATA_LISTENKEY_TIMESTAMP'] = str(time.time())
+            #timestamp notice
+    ping()
+    listenupdates_socket = f'wss://testnet.binance.vision/ws/{userdata_listenkey}'
+    def on_message(wsapp, message):
+        print(message)
+    def on_error(wsapp, error):
+        print(error)
+    def on_open(wsapp):
+        print('Listening to account updates has started')
+
+    wsapp = websocket.WebSocketApp(listenupdates_socket, on_message=on_message, on_error=on_error, on_open=on_open)
+    wsapp.run_forever()
+torders_status = Thread(target = orders_status)
 def handle_trades(json_message):
     global n
     global priceq
     global working
     price = json_message['p']
-    '''
-    date_time = datetime.datetime.fromtimestamp(json_message['E'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
-    print("SYMBOL: " + json_message['s'])
-    print("PRICE: " + price)
-    print("QTY: " + json_message['q'])
-    print("TIMESTAMP: " + str(date_time))
-    print("-----------------------")
-    '''
     print(f'UPD {n}, {price}')
     n+=1
     priceq.put(price)
@@ -112,4 +131,5 @@ def handle_trades(json_message):
     if not working:
         working = True
         torders.start()
+        torders_status.start()
 init_listen()
