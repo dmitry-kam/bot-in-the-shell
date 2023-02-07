@@ -5,7 +5,8 @@ pip install pipenv
 alias pipenv=~/.local/bin/pipenv
 rm get-pip.py
 pipenv shell
-pipenv update
+# установка пакетов из .lock (заданные версии) без обновления версий окружения
+pipenv install
 apt install mariadb-server
 
 ### Install Elasticsearch (use VPN for download) ###

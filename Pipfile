@@ -12,6 +12,7 @@ tqdm = "4.64.1"
 
 [scripts]
 generateDocumentation="bash docs/generateDocumentation.sh"
+startBot={call = "src.botEntrypoint:BotEntrypointClass()"}
 #commandName = "python src/socketSniffer.py" # example
 #sniffer = {call = "sandbox.socketSniffer:ws_trades()"}
 #funcWithoutArgs = {call = "sandbox.envExample:getEnvVars()"}
