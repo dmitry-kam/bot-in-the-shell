@@ -9,10 +9,11 @@ websocket-client = "1.4.2"
 peewee = "3.15.4"
 elasticsearch = "8.6.0"
 tqdm = "4.64.1"
+orjson = "3.8.5"
 
 [scripts]
 generateDocumentation="bash docs/generateDocumentation.sh"
-startBot={call = "src.botEntrypoint:BotEntrypointClass()"}
+#startBot={call = "src.botEntrypoint:BotEntrypointClass()"}
 #commandName = "python src/socketSniffer.py" # example
 #sniffer = {call = "sandbox.socketSniffer:ws_trades()"}
 #funcWithoutArgs = {call = "sandbox.envExample:getEnvVars()"}
