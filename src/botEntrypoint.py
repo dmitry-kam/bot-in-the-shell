@@ -1,7 +1,7 @@
 import os
 # from signal.signal import SignalClass
 # from src.signal.signal import SignalChange
-import src.signal.signal as ss
+import src.signalX as signalX
 import importlib
 
 
@@ -9,7 +9,8 @@ class BotEntrypointClass():#SignalChange
     def __init__(self):
         print('Constructor')
         self.startBot(self)
-        module = importlib.import_module('src.signal.signal')
+        #print(signalX.__dict__)
+        module = importlib.import_module('src.signalX.' + os.environ['SIGNAL_HANDLER'])
         print('Change class...')
         print(os.environ['SIGNAL_HANDLER'], type(os.environ['SIGNAL_HANDLER']))
         class_ = getattr(module, os.environ['SIGNAL_HANDLER'])
