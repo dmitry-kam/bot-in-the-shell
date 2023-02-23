@@ -1,6 +1,5 @@
 import os
 import time
-import orjson
 import json
 import datetime
 import requests
@@ -76,9 +75,9 @@ def parseData(esConnection):
                     file.close()
             else:
                 url = "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/historical?id="+str(coin)+"&convertId=2781&timeStart="+str(startDate)+"&timeEnd="+str(endDate)
-                content = orjson.loads(requests.get(url).content)
+                content = json.loads(requests.get(url).content)
                 with open(os.path.dirname(os.path.realpath(__file__)) + TMP_FILES_DIRECTORY + str(coin) + "_" + str(year) + '.json', 'w') as file:
-                    file.write(orjson.dumps(content))
+                    file.write(json.dumps(content))
                     file.close()
 
             if (content['status']['error_message'] == "SUCCESS"):
