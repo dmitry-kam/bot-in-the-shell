@@ -1,16 +1,23 @@
 import os
 # from signal.signal import SignalClass
 # from src.signal.signal import SignalChange
-import src.signalX as signalX
+import signalX as signalX
 import importlib
 
 
-class BotEntrypointClass():#SignalChange
+class BotEntrypointClass():
+    # Singleton pattern
+    obj = None
+    someattr = 0
+    def __new__(cls, *args, **kwargs):
+        if cls.obj is None:
+            cls.obj = object.__new__(cls, *args, **kwargs)
+        return cls.obj
     def __init__(self):
         print('Constructor')
         self.startBot(self)
         #print(signalX.__dict__)
-        module = importlib.import_module('src.signalX.' + os.environ['SIGNAL_HANDLER'])
+        module = importlib.import_module('signalX.' + os.environ['SIGNAL_HANDLER'])
         print('Change class...')
         print(os.environ['SIGNAL_HANDLER'], type(os.environ['SIGNAL_HANDLER']))
         class_ = getattr(module, os.environ['SIGNAL_HANDLER'])
@@ -24,6 +31,13 @@ class BotEntrypointClass():#SignalChange
     def startBot(self):
         print('Start bot')
 
+    def ssss(self):
+        print('Start', self.someattr)
 
-def ssss():
-    print('Start')
+
+x = BotEntrypointClass()
+x.ssss()
+x.someattr = 88
+x.ssss()
+y = BotEntrypointClass()
+y.ssss()
