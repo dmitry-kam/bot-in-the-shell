@@ -11,6 +11,7 @@ HISTORY_INDEX_PREFIX = 'daily_'
 TMP_FILES_DIRECTORY = '/../tmp/'
 
 coinFirstHistoricalPrice = 0
+coinFirstHistoricalVolume = 0
 
 def migrate():
     es = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])
@@ -109,6 +110,15 @@ def migrate():
                 },
                 "deviationAvgPriceMonth": {
                     "type":   "float"
+                },
+                "LogVolume": {
+                    "type":   "float"
+                },
+                "increasePercentWeek": {
+                    "type":   "float"
+                },
+                "increasePercentWeightedMonth": {
+                    "type":   "float"
                 }
             }
         }
@@ -118,6 +128,7 @@ def migrate():
     parseData(es)
 def parseData(esConnection):
     global coinFirstHistoricalPrice
+    global coinFirstHistoricalVolume
     coinsList = [os.environ['COINMARKETCAP_BTC_ID'], os.environ['COINMARKETCAP_ETH_ID'], os.environ['COINMARKETCAP_BNB_ID']]
     yearsList = range(2017, 2023, 1) # 1.1.2017 - 1.1.2023
 
@@ -150,6 +161,7 @@ def parseData(esConnection):
 
                 if yearsList[0] == year:
                     coinFirstHistoricalPrice = content['data']['quotes'][0]['quote']['low']
+                    coinFirstHistoricalVolume = content['data']['quotes'][0]['quote']['volume']
 
                 for archivePrice in content['data']['quotes']:
 
@@ -189,9 +201,12 @@ def convertCoinMarketObject(json):
     }
 def getComputableValues(doc, history, esConnection):
     global coinFirstHistoricalPrice
+    global coinFirstHistoricalVolume
 
     def getAvgPrice(i):
         return i["avgPrice"]
+    def getIncreaseDay(i):
+        return 1 if i["increaseDay"] else 0
     def getPriceVariation(i):
         return i["priceVariation"]
     def getLogAvgPrice(i):
@@ -199,6 +214,12 @@ def getComputableValues(doc, history, esConnection):
     def countAvg(values, f):
         vectorizeNpFunction = np.vectorize(f)
         return np.average(vectorizeNpFunction(values))
+    def countWeightedAvg(values, f):
+        vectorizeNpFunction = np.vectorize(f)
+        weights = np.arange(1 / len(values) - 0.00000001, 1, 1 / len(values))
+        #print("values", values)
+        #print("weights", weights, "valuesLen", len(values))
+        return np.average(vectorizeNpFunction(values), weights=weights)
     def countStd(values, f):
         vectorizeNpFunction = np.vectorize(f)
         return np.std(vectorizeNpFunction(values))
@@ -206,15 +227,17 @@ def getComputableValues(doc, history, esConnection):
     # средняя цена за сегодня
     doc["avgPrice"] = round((doc["highPrice"] + doc["lowPrice"])/2, 4)
     # колебание цены за сегодня (%), decrease < 1, increase > 1
-    doc["priceVariation"] = round((doc["highPrice"]/doc["lowPrice"]) if doc["highPrice"]>doc["lowPrice"] else (doc["lowPrice"]/doc["highPrice"]), 4)
+    doc["priceVariation"] = round((doc["highPrice"]/doc["lowPrice"]) if doc["closePrice"] > doc["openPrice"] else (doc["lowPrice"]/doc["highPrice"]), 4)
     # за сегодняшний день был рост или падение
     doc["increaseDay"] = doc["closePrice"] > doc["openPrice"]
     # десятичный логарифм от средней цены за сегодня
     doc["LgAvgPrice"] = round(np.log10(doc["avgPrice"]), 4)
     # логарифм* по основанию от первой исторической (в контексте скрипта) цены от средней цены за сегодня: log{b}X = log{c}X / log{c}B
     doc["LogAvgPrice"] = round(np.log(doc["avgPrice"]) / np.log(coinFirstHistoricalPrice), 4)
+    # логарифм* по основанию от первого исторического (в контексте скрипта) объема торгов от сегодняшнего:
+    doc["LogVolume"] = round(np.log(doc["volume"]) / np.log(coinFirstHistoricalVolume), 4)
 
-    if len(history)>0 and "avgPrice" in history[-1]:
+    if len(history) > 0 and "avgPrice" in history[-1]:
         # средняя цена в сравнении с прошлым днем
         doc["avgPriceComparedToYesterday"] = round(doc["avgPrice"]/history[-1]["avgPrice"], 4)
         # средняя цена за неделю (не считая сегодняшнюю)
@@ -238,7 +261,7 @@ def getComputableValues(doc, history, esConnection):
             pass
         # средний логарифм* за неделю
         doc["LogAvgPriceWeek"] = round(countAvg(history[-7:], getLogAvgPrice), 4)
-        # редний логарифм* месяц
+        # средний логарифм* месяц
         doc["LogAvgPriceMonth"] = round(countAvg(history, getLogAvgPrice), 4)
         # среднеквадратическое отклонение колебаний за неделю
         doc["deviationVariationWeek"] = round(countStd(history[-7:], getPriceVariation), 4)
@@ -248,6 +271,12 @@ def getComputableValues(doc, history, esConnection):
         doc["deviationAvgPriceWeek"] = round(countStd(history[-7:], getAvgPrice), 4)
         # среднеквадратическое отклонение средних цен за месяц
         doc["deviationAvgPriceMonth"] = round(countStd(history, getAvgPrice), 4)
+
+    if len(history) > 7:
+        # процент дней роста за предшествующую неделю
+        doc["increasePercentWeek"] = round(countAvg(history[-7:], getIncreaseDay), 2)
+        # взвешенный процент дней роста за предшествующий период (до месяца)
+        doc["increasePercentWeightedMonth"] = round(countWeightedAvg(history, getIncreaseDay), 2)
 
     return doc
 
