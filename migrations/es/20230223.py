@@ -12,8 +12,13 @@ TMP_FILES_DIRECTORY = '/../tmp/'
 
 coinFirstHistoricalPrice = 0
 coinFirstHistoricalVolume = 0
+parsingCoin = ""
 
 def migrate():
+    directory = os.path.dirname(os.path.realpath(__file__)) + TMP_FILES_DIRECTORY
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     es = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])
 
     for coin in ['btc', 'eth', 'bnb']:
@@ -67,6 +72,9 @@ def migrate():
                     "type":   "float"
                 },
                 "priceVariation": {
+                    "type":   "float"
+                },
+                "priceVariationAbs": {
                     "type":   "float"
                 },
                 "priceVariationWeek": {
@@ -127,6 +135,7 @@ def migrate():
 
     parseData(es)
 def parseData(esConnection):
+    global parsingCoin
     global coinFirstHistoricalPrice
     global coinFirstHistoricalVolume
     coinsList = [os.environ['COINMARKETCAP_BTC_ID'], os.environ['COINMARKETCAP_ETH_ID'], os.environ['COINMARKETCAP_BNB_ID']]
@@ -136,6 +145,10 @@ def parseData(esConnection):
         for iteration in progressBar:
             coin = iteration['coin']
             year = iteration['year']
+
+            if (parsingCoin != coin):
+                parsingCoin = coin
+                historicalArray = np.array([])
 
             #print(coin, year)
 
@@ -157,7 +170,6 @@ def parseData(esConnection):
 
             if (content['status']['error_message'] == "SUCCESS"):
                 indexName = HISTORY_INDEX_PREFIX + content['data']['symbol'].lower()
-                historicalArray = np.array([])
 
                 if yearsList[0] == year:
                     coinFirstHistoricalPrice = content['data']['quotes'][0]['quote']['low']
@@ -228,6 +240,8 @@ def getComputableValues(doc, history, esConnection):
     doc["avgPrice"] = round((doc["highPrice"] + doc["lowPrice"])/2, 4)
     # колебание цены за сегодня (%), decrease < 1, increase > 1
     doc["priceVariation"] = round((doc["highPrice"]/doc["lowPrice"]) if doc["closePrice"] > doc["openPrice"] else (doc["lowPrice"]/doc["highPrice"]), 4)
+    # абсолютное колебание цены за сегодня (%), без "знака"
+    doc["priceVariationAbs"] = round(doc["highPrice"]/doc["lowPrice"], 4)
     # за сегодняшний день был рост или падение
     doc["increaseDay"] = doc["closePrice"] > doc["openPrice"]
     # десятичный логарифм от средней цены за сегодня
@@ -257,6 +271,7 @@ def getComputableValues(doc, history, esConnection):
             if esConnection is not None:
                 resp = esConnection.get(index=HISTORY_INDEX_PREFIX + "btc", id=getDate(doc['timeOpen']))
                 doc["differenceBTC"] = round(doc["priceVariation"] / resp['_source']["priceVariation"], 4)
+                # todo проверить
         except Exception:
             pass
         # средний логарифм* за неделю

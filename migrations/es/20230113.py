@@ -10,6 +10,10 @@ HISTORY_INDEX_PREFIX = 'daily_'
 TMP_FILES_DIRECTORY = '/../tmp/'
 
 def migrate():
+    directory = os.path.dirname(os.path.realpath(__file__)) + TMP_FILES_DIRECTORY
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     es = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])
 
     for coin in ['btc', 'eth', 'bnb']:
