@@ -8,7 +8,7 @@ es = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])
 indicesList = ["daily_btc", "daily_eth", "daily_bnb"]
 coinsList = ["BTC", "ETH", "BNB"]
 colorsList = ["blue", "yellow", "red"]
-# 23*23*3 plots
+# (23*22)/2*3 plots
 researchableParamsList = [
     "volume",
     "avgPriceComparedToYesterday",
@@ -62,7 +62,7 @@ for i in range(len(indicesList)):
 
     for j in range(len(researchableParamsList)):
         for k in range(len(researchableParamsList)):
-            if j == k:
+            if j >= k:
                 continue
 
             analyzedField = researchableParamsList[j]

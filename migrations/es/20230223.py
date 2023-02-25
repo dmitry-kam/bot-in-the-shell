@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import orjson
 import datetime
@@ -7,7 +8,8 @@ import numpy as np
 from tqdm import tqdm
 from elasticsearch import Elasticsearch
 
-HISTORY_INDEX_PREFIX = 'daily_'
+# "python migrations/es/20230223.py 2023" - загрузит в отдельные индексы информацию за 2023 год
+HISTORY_INDEX_PREFIX = 'daily_' if len(sys.argv) == 1 else 'daily_' + sys.argv[1] + '_'
 TMP_FILES_DIRECTORY = '/../tmp/'
 
 coinFirstHistoricalPrice = 0
@@ -130,7 +132,8 @@ def migrate():
                 }
             }
         }
-        es.indices.delete(index=HISTORY_INDEX_PREFIX + coin)
+        if es.indices.exists(index=HISTORY_INDEX_PREFIX + coin):
+            es.indices.delete(index=HISTORY_INDEX_PREFIX + coin)
         es.indices.create(index=HISTORY_INDEX_PREFIX + coin, mappings=requestBody)
 
     parseData(es)
@@ -139,7 +142,10 @@ def parseData(esConnection):
     global coinFirstHistoricalPrice
     global coinFirstHistoricalVolume
     coinsList = [os.environ['COINMARKETCAP_BTC_ID'], os.environ['COINMARKETCAP_ETH_ID'], os.environ['COINMARKETCAP_BNB_ID']]
-    yearsList = range(2017, 2023, 1) # 1.1.2017 - 1.1.2023
+    if (len(sys.argv) == 1):
+        yearsList = range(2017, 2023, 1) # 1.1.2017 - 1.1.2023
+    else:
+        yearsList = range(int(sys.argv[1]), int(sys.argv[1]) + 1, 1)
 
     for progressBar in tqdm([[{'coin': coin, 'year': y} for y in yearsList] for coin in coinsList], desc="Parse data..."):
         for iteration in progressBar:
@@ -163,9 +169,10 @@ def parseData(esConnection):
                     file.close()
             else:
                 url = "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/historical?id="+str(coin)+"&convertId=2781&timeStart="+str(startDate)+"&timeEnd="+str(endDate)
-                content = orjson.loads(requests.get(url).content)
+                urlContent = requests.get(url).content
+                content = orjson.loads(urlContent)
                 with open(os.path.dirname(os.path.realpath(__file__)) + TMP_FILES_DIRECTORY + str(coin) + "_" + str(year) + '.json', 'w') as file:
-                    file.write(orjson.dumps(content))
+                    file.write(str(urlContent, 'utf-8'))
                     file.close()
 
             if (content['status']['error_message'] == "SUCCESS"):
