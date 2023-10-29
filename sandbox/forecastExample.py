@@ -31,8 +31,8 @@ index = "daily_eth"
 
 data = es.search(index=index, query={"match_all": {}}, size=10000, sort='timeOpen')
 data = data['hits']['hits'][7:]
-# data = data[-100:] # 4 квартал 2022
-data = data[1750:] # с конца 2021 (нисходящий тренд)
+data = data[-100:] # 4 квартал 2022
+#data = data[1750:] # с конца 2021 (нисходящий тренд)
 
 currentOrderType = "BUY"
 currentOrderPrice = 0.
@@ -45,7 +45,7 @@ waitMode = False
 closedAll = 0
 wait = 0
 waitAll = 0
-basta = 1488
+basta = 10000
 
 def makeOrder(price):
     global currentOrderPrice
@@ -143,3 +143,5 @@ print("closedAll: " + str(closedAll))
 print("waitAll: " + str(closedAll))
 
 print("Итого у меня к " + source['timeOpen'] + ".  " + str(deposit) + " $$$ и " + str(coinValue) + " ETH ")
+
+# todo: реализовать продажу при падении на 1%, либо ожидание при росте
