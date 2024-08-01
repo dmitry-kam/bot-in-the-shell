@@ -143,7 +143,7 @@ def parseData(esConnection):
     global coinFirstHistoricalVolume
     coinsList = [os.environ['COINMARKETCAP_BTC_ID'], os.environ['COINMARKETCAP_ETH_ID'], os.environ['COINMARKETCAP_BNB_ID']]
     if (len(sys.argv) == 1):
-        yearsList = range(2017, 2023, 1) # 1.1.2017 - 1.1.2023
+        yearsList = range(2017, 2025, 1) # 1.1.2017 - 1.1.2025
     else:
         yearsList = range(int(sys.argv[1]), int(sys.argv[1]) + 1, 1)
 

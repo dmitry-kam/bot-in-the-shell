@@ -55,13 +55,14 @@ def migrate():
                 }
             }
         }
-        es.indices.delete(index=HISTORY_INDEX_PREFIX + coin)
+        if es.indices.exists(index=HISTORY_INDEX_PREFIX + coin):
+            es.indices.delete(index=HISTORY_INDEX_PREFIX + coin)
         es.indices.create(index=HISTORY_INDEX_PREFIX + coin, mappings=requestBody)
 
     parseData(es)
 def parseData(esConnection):
     coinsList = [os.environ['COINMARKETCAP_BTC_ID'], os.environ['COINMARKETCAP_ETH_ID'], os.environ['COINMARKETCAP_BNB_ID']]
-    yearsList = range(2017, 2023, 1) # 1.1.2017 - 1.1.2023
+    yearsList = range(2017, 2025, 1) # 1.1.2017 - 1.1.2025
 
     for progressBar in tqdm([[{'coin': coin, 'year': y} for y in yearsList] for coin in coinsList], desc="Parse data..."):
         for iteration in progressBar:

@@ -1,6 +1,3 @@
-
-print('init signal module')
+from . import signalOne, signalTwo
 
 __all__ = []
-
-from . import signalOne, signalTwo
