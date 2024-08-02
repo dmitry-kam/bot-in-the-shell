@@ -1,6 +1,7 @@
 from .exchangeAbstractClass import exchangeAbstractClass
 from pybit.unified_trading import HTTP
 import os
+
 class ByBitStrategy(exchangeAbstractClass):
     def connect(self):
         print('ByBitStrategy')
@@ -11,12 +12,18 @@ class ByBitStrategy(exchangeAbstractClass):
             api_secret=os.environ['SECRET_KEY'],
         )
 
-    def balance(self):
+    def getBalance(self):
         # print(session.get_orderbook(category="linear", symbol="BTCUSDT"))
-        print(self.session.get_wallet_balance(
+        balanceAnswer = self.session.get_wallet_balance(
             accountType="UNIFIED",
-            coin="USDT"
-        ))
+            coin="USDT,ETH"
+        )
+        #print(balanceAnswer)
+
+        for coinBalance in balanceAnswer['result']['list'][0]['coin']:
+            print(coinBalance['walletBalance'])
+            print(coinBalance['coin'])
+            self.cache.set(coinBalance['coin'], coinBalance['walletBalance'])
 
         # print(self.session.place_order(
         #     category="linear",

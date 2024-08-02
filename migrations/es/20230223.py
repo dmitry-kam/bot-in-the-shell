@@ -9,6 +9,7 @@ from tqdm import tqdm
 from elasticsearch import Elasticsearch
 
 # "python migrations/es/20230223.py 2023" - загрузит в отдельные индексы информацию за 2023 год
+# localhost:9201/daily_eth/_doc/2024-07-31
 HISTORY_INDEX_PREFIX = 'daily_' if len(sys.argv) == 1 else 'daily_' + sys.argv[1] + '_'
 TMP_FILES_DIRECTORY = '/../tmp/'
 

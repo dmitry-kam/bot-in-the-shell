@@ -5,8 +5,9 @@ import importlib
 class BotEntrypointClass():
     # Singleton pattern
     obj = None
+
     # attributes
-    exchange = None
+    exchangeInstance = None
 
     def __new__(cls, *args, **kwargs):
         if cls.obj is None:
@@ -21,14 +22,15 @@ class BotEntrypointClass():
         signalInstance = signalClass()
         signalInstance.move()
 
-        ###############3
+        ###############
 
         exchangeStrategy = importlib.import_module('exchange.' + os.environ['EXCHANGE'] + 'Strategy')
         print('++++++++++++++++++++++++++++')
         exchangeClass = getattr(exchangeStrategy, os.environ['EXCHANGE'] + 'Strategy')
-        exchangeInstance = exchangeClass()
-        exchangeInstance.connect()
-        exchangeInstance.balance()
+        self.exchangeInstance = exchangeClass()
+        self.exchangeInstance.connect()
+        self.exchangeInstance.initCache()
+        self.exchangeInstance.getBalance()
 
         pass
 
