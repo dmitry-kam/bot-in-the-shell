@@ -2,6 +2,9 @@ services:
   # sudo docker exec -it bot-redis redis-cli
   redis:
     image: redis:latest
+    #env_file:
+    #  - path: "./.env"
+    #    required: true
     container_name: bot-redis
     ports:
       - "6389:6379"

@@ -66,6 +66,7 @@ def checkOrder(day):
     global fee
     global feeSum
     global basta
+    # todo closePrice и openPrice сравнить
     if currentOrderType == "BUY":
         if day['openPrice'] <= currentOrderPrice or day['highPrice'] <= currentOrderPrice \
                 or day['lowPrice'] <= currentOrderPrice or day['closePrice'] <= currentOrderPrice:

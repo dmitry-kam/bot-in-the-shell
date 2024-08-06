@@ -4,8 +4,7 @@ import os
 
 class ByBitStrategy(exchangeAbstractClass):
     def connect(self):
-        print('ByBitStrategy')
-        print('=============')
+        print('ByBitStrategy has chosen')
         self.session = HTTP(
             testnet=False,
             api_key=os.environ['API_KEY'],
@@ -25,10 +24,11 @@ class ByBitStrategy(exchangeAbstractClass):
             print(coinBalance['coin'])
             self.cache.set(coinBalance['coin'], coinBalance['walletBalance'])
 
-        # print(self.session.place_order(
-        #     category="linear",
-        #     symbol="BTCUSDT",
-        #     side="Buy",
-        #     orderType="Market",
-        #     qty=0.001,
-        # ))
+    def placeOrder(self):
+        print(self.session.place_order(
+            category="linear",
+            symbol="BTCUSDT",
+            side="Buy",
+            orderType="Market",
+            qty=0.001,
+        ))
