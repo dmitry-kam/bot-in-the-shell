@@ -41,6 +41,8 @@ services:
       - "5482:5432"
     networks:
       - bot-network
+    volumes:
+      - /private/var/lib/postgresql:/var/lib/postgresql
 
 networks:
   bot-network:

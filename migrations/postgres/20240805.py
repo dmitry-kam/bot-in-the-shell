@@ -37,5 +37,5 @@ def create_logs_table():
         conn.close()
 
 
-if __name__ == "__main__":
-    create_logs_table()
+#if __name__ == "__main__":
+create_logs_table()

@@ -303,4 +303,5 @@ def getComputableValues(doc, history, esConnection):
 
     return doc
 
+#if __name__ == "__main__":
 migrate()

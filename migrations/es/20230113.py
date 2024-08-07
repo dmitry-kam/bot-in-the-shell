@@ -115,4 +115,5 @@ def convertCoinMarketObject(json):
         "marketCap": json['quote']['marketCap']
     }
 
+#if __name__ == "__main__":
 migrate()

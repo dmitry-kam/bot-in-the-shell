@@ -8,7 +8,7 @@ pipenv shell
 # установка пакетов из .lock (заданные версии) без обновления версий окружения
 pipenv install
 #pipenv run pip install psycopg2-binary
-#apt install mariadb-server
+#pipenv run pip install python-telegram-bot
 mkdir migrations/tmp sandbox/tmp
 chmod 777 -Rf migrations/tmp sandbox/tmp
 

@@ -29,6 +29,9 @@ class BotEntrypointClass():
         
         self.startBot()
 
+    def __del__(self):
+        print('bot has stopped')
+
     def initCache(self):
         self.cache = StrictRedis(host=os.environ['REDIS_HOST'], port=os.environ['REDIS_PORT'], db=0)
         
