@@ -1,6 +1,8 @@
+from elasticsearch import Elasticsearch
 from cache import redis
 import importlib
 import datetime
+import psycopg2
 import orjson
 import time
 import os
@@ -14,6 +16,8 @@ class BotEntrypointClass():
     tradingConfig = None
     cache = None
     cacheSubscriber = None
+    elasticSearchConnection = None
+    databaseConnection = None
     loggers = []
     signals = []
 
@@ -38,6 +42,22 @@ class BotEntrypointClass():
         print('Init subscribers')
         self.cacheSubscriber = self.cache.redisConnection.pubsub()
         self.cacheSubscriber.psubscribe(**{self.cache.logsChannel: self.handleLogMessage})
+
+    def initElastic(self):
+        self.elasticSearchConnection = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])
+        print('Init ES')
+
+    def initDatabase(self):
+        dbParams = {
+            'dbname': os.environ['POSTGRES_DB'],
+            'user': os.environ['POSTGRES_USER'],
+            'password': os.environ['POSTGRES_PASSWORD'],
+            'host': os.environ['POSTGRES_HOST'],
+            'port': os.environ['POSTGRES_PORT']
+        }
+        self.databaseConnection = psycopg2.connect(**dbParams)
+        self.databaseCursor = self.connection.cursor()
+        print('Init DB')
 
     def initExchange(self):
         exchangeStrategy = importlib.import_module('exchange.' + os.environ['EXCHANGE'] + 'Strategy')

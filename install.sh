@@ -12,6 +12,8 @@ pipenv install
 mkdir migrations/tmp sandbox/tmp
 chmod 777 -Rf migrations/tmp sandbox/tmp
 
+# docker-compose environment
+
 make start
 
 python migrations/execute.py
