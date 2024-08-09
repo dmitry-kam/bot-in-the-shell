@@ -13,7 +13,7 @@ up:																														##Starting containers
 stop:																													##Stop containers
 	$(DOCKER_COMPOSE) stop
 
-remove:																													##Delete containers
+remove:																													##Delete containers and clear database
 	$(DOCKER_COMPOSE) kill
 	$(DOCKER_COMPOSE) rm -v --force
 

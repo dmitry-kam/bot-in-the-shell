@@ -1,8 +1,7 @@
-from redis import StrictRedis
+from cache import redis
 import importlib
 import datetime
 import orjson
-import redis
 import time
 import os
 
@@ -12,8 +11,9 @@ class BotEntrypointClass():
 
     # attributes
     exchangeInstance = None
+    tradingConfig = None
     cache = None
-    redisSubscriber = None
+    cacheSubscriber = None
     loggers = []
     signals = []
 
@@ -24,17 +24,21 @@ class BotEntrypointClass():
 
     def __init__(self):
         self.initCache()
-        self.initExchange()
         self.setLoggers()
-        
+        self.initExchange()
+        self.loadTradingConfig()
+
         self.startBot()
 
     def __del__(self):
-        print('bot has stopped')
+        print('Bot has stopped')
 
     def initCache(self):
-        self.cache = StrictRedis(host=os.environ['REDIS_HOST'], port=os.environ['REDIS_PORT'], db=0)
-        
+        self.cache = redis.RedisCustom()
+        print('Init subscribers')
+        self.cacheSubscriber = self.cache.redisConnection.pubsub()
+        self.cacheSubscriber.psubscribe(**{self.cache.logsChannel: self.handleLogMessage})
+
     def initExchange(self):
         exchangeStrategy = importlib.import_module('exchange.' + os.environ['EXCHANGE'] + 'Strategy')
         exchangeClass = getattr(exchangeStrategy, os.environ['EXCHANGE'] + 'Strategy')
@@ -56,9 +60,6 @@ class BotEntrypointClass():
 
         del loggersList, loggersStrategies, loggerName
 
-        self.redisSubscriber = self.cache.pubsub()
-        self.redisSubscriber.psubscribe(**{'logs': self.handleLogMessage})
-
     def handleLogMessage(self, channelEvent):
         try:
             messageDTO = orjson.loads(channelEvent['data'])
@@ -70,7 +71,8 @@ class BotEntrypointClass():
             print('Bad log message! ' + str(e))
 
     def setSignals(self):
-        module = importlib.import_module('signalX.' + os.environ['SIGNAL_HANDLER'])
+        pass
+        #module = importlib.import_module('signalX.' + os.environ['SIGNAL_HANDLER'])
         # signalClass = getattr(module, os.environ['SIGNAL_HANDLER'])
         # signalInstance = signalClass()
         # signalInstance.move()
@@ -79,19 +81,40 @@ class BotEntrypointClass():
         # todo каждый час
         print('selfCheck')
 
+    def loadTradingConfig(self):
+        configPath = os.path.dirname(os.path.realpath(__file__)) + '/../' + os.environ['TRADING_STRATEGY_CONFIG']
+        try:
+            if os.path.isfile(configPath):
+                with open(configPath) as file:
+                    self.tradingConfig = orjson.loads(file.read())
+                    file.close()
+
+            if self.tradingConfig is None:
+                raise Exception("Bad JSON")
+            else:
+                self.cache.sendMessage('OK', 'Trading strategy has loaded - ' + configPath, self.tradingConfig)
+        except Exception as e:
+            self.cache.sendMessage('CRITICAL', 'Can\'t load trading config - ' + configPath, {"error": e})
+        finally:
+            del configPath
+
+    def loadStrategies(self):
+        strategyNames = os.getenv('SIGNAL_STRATEGIES', '').split(',')
+        strategies = []
+
+        for name in strategy_names:
+            module = __import__('signalX', fromlist=[name])
+            strategy_class = getattr(module, name)
+            strategies.append(strategy_class())
+
+        return strategies
+
     def startBot(self):
-        now = datetime.datetime.now()
-        startMessage = {
-            "level": "OK",
-            "message": "Bot has been launched",
-            "context": {},
-            "time": str(now)
-        }
-        self.cache.publish('logs', orjson.dumps(startMessage))
+        self.cache.sendMessage('OK', 'Bot has been launched', {})
 
         # todo: условия что все ок
         while True:
-            self.redisSubscriber.get_message()
+            self.cacheSubscriber.get_message()
 
             time.sleep(3)
             #time.sleep(int(os.environ['SLEEP_DURATION']))

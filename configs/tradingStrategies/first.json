@@ -1,0 +1,32 @@
+{
+  "FIRST_TRADING_STRATEGY_ETHUSDT": {
+      "COIN_A": "ETH",
+      "COIN_B": "USDT",
+      "DEPOSIT_MODE": "STABLE",
+      "DEPOSIT_MODE_DESCRIPTION": "STABLE - используемый ботом депозит не растет, прибыль откладывается; DYNAMIC - весь депозит идет в работу",
+      "DEPOSIT_VALUE_B": 1000,
+      "ORDER_VOLUME_MIN": 0.1,
+      "ORDER_VOLUME_MAX": 1.0,
+      "ORDER_VOLUME_DESCRIPTION": "Сумма ордера - процент от депозита",
+      "ORDER_REWARD_PERCENT": 0.03,
+      "ORDER_REWARD_PERCENT_DESCRIPTION": "Минимальный процент прибыли за ордер",
+      "AVAILABLE_ORDERS_TYPE": ["GTC", "IOC"],
+      "MAX_AVAILABLE_ORDERS": 1,
+      "MIN_TRADING_VOLUME": 1,
+      "MIN_TRADING_VOLUME_DESCRIPTION": "Минимальный объем ордеров (свеча) на текущий момент (в процентах), чтобы успеть закрыть свой",
+      "RIGHT_TO_LOSE": {
+          "MODE": false,
+          "QTY_PER_DAY": 3,
+          "QTY_PER_DAY_DESCRIPTION": "Максимальное число убыточных ордеров за сутки",
+          "LOSE_PER_ORDER": 0.01,
+          "LOSE_PER_ORDER_DESCRIPTION": "Максимальный убыток за отмененный ордер",
+          "TIME_TO_WAIT": 3600,
+          "TIME_TO_WAIT_DESCRIPTION": "Время (с) ожидания до отмены ордера"
+      },
+      "SIGNALS": {
+          "AVG_Y": 0.8,
+          "KLINE": 0.7
+      },
+      "BEHAVIORAL_MODIFICATORS": ["WAIT_UNTIL_INCREASE"]
+  }
+}

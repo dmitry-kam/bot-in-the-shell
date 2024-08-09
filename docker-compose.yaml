@@ -42,10 +42,11 @@ services:
     networks:
       - bot-network
     volumes:
-      - /private/var/lib/postgresql:/var/lib/postgresql
+      - postgresdata:/var/lib/postgressql/data
 
 networks:
   bot-network:
     
 volumes:
   esdata:
+  postgresdata:
