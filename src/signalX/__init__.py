@@ -1,3 +1,5 @@
-from . import signalOne, signalTwo
+from . import signalOne
 
-__all__ = []
+__all__ = [
+    'signalOne'
+]

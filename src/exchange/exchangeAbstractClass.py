@@ -16,4 +16,27 @@ class exchangeAbstractClass(ABC):
         pass
 
 
+    #
+    # @abstractmethod
+    # def get_account_balance(self):
+    #     pass
+    #
+    # @abstractmethod
+    # def getMarketData(self, symbol):
+    #     pass
+    #
+    # @abstractmethod
+    # def placeOrder(self, symbol, quantity, order_type, price=None):
+    #     pass
+    #
+    # @abstractmethod
+    # def cancelOder(self, order_id):
+    #     pass
+    #
+    # @abstractmethod
+    # def checkOrder(self, order_id):
+    #     pass
+
+
+
     # todo принимать числа

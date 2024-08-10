@@ -29,8 +29,11 @@ class BotEntrypointClass():
     def __init__(self):
         self.initCache()
         self.setLoggers()
+        self.initElastic()
+        self.initDatabase()
         self.initExchange()
         self.loadTradingConfig()
+        self.setSignals()
 
         self.startBot()
 
@@ -45,7 +48,7 @@ class BotEntrypointClass():
 
     def initElastic(self):
         self.elasticSearchConnection = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])
-        print('Init ES')
+        self.sendMessage('INFO', 'Init ES', {})
 
     def initDatabase(self):
         dbParams = {
@@ -56,8 +59,9 @@ class BotEntrypointClass():
             'port': os.environ['POSTGRES_PORT']
         }
         self.databaseConnection = psycopg2.connect(**dbParams)
-        self.databaseCursor = self.connection.cursor()
-        print('Init DB')
+        self.databaseCursor = self.databaseConnection.cursor()
+        self.sendMessage('INFO', 'Init DB', {})
+        del dbParams
 
     def initExchange(self):
         exchangeStrategy = importlib.import_module('exchange.' + os.environ['EXCHANGE'] + 'Strategy')
@@ -71,6 +75,7 @@ class BotEntrypointClass():
     def setLoggers(self):
         loggersList = os.environ['LOGGERS_LIST'].split(',')
         loggersStrategies = importlib.import_module('logger')
+        loggerName = None
 
         for loggerName in loggersStrategies.__all__:
             loggerClass = importlib.import_module('logger.' + loggerName)
@@ -88,18 +93,32 @@ class BotEntrypointClass():
             for logger in self.loggers:
                 logger.log(level, message, context, time)
         except Exception as e:
-            print('Bad log message! ' + str(e))
+            self.sendMessage('WARNING', 'Bad log message! ' + str(e), {})
 
     def setSignals(self):
-        pass
-        #module = importlib.import_module('signalX.' + os.environ['SIGNAL_HANDLER'])
-        # signalClass = getattr(module, os.environ['SIGNAL_HANDLER'])
-        # signalInstance = signalClass()
-        # signalInstance.move()
+        signalList = list(self.tradingConfig['SIGNALS'].keys())
+        signalStrategies = importlib.import_module('signalX')
+        signalName = None
+
+        for signalName in signalStrategies.__all__:
+            signalClass = importlib.import_module('signalX.' + signalName)
+            signalClass = getattr(signalClass, signalName)
+            if signalClass.isSuitable(signalList):
+                self.signals.append(signalClass(
+                    self.tradingConfig,
+                    self.cache,
+                    self.elasticSearchConnection,
+                    self.databaseConnection
+                ))
+
+        del signalList, signalStrategies, signalName
 
     def selfCheck(self):
         # todo каждый час
         print('selfCheck')
+
+    def sendMessage(self, level: str, message: str, context: dict):
+        self.cache.sendMessage(level, message, context)
 
     def loadTradingConfig(self):
         configPath = os.path.dirname(os.path.realpath(__file__)) + '/../' + os.environ['TRADING_STRATEGY_CONFIG']
@@ -112,25 +131,14 @@ class BotEntrypointClass():
             if self.tradingConfig is None:
                 raise Exception("Bad JSON")
             else:
-                self.cache.sendMessage('OK', 'Trading strategy has loaded - ' + configPath, self.tradingConfig)
+                self.sendMessage('OK', 'Trading strategy has loaded - ' + configPath, self.tradingConfig)
         except Exception as e:
-            self.cache.sendMessage('CRITICAL', 'Can\'t load trading config - ' + configPath, {"error": e})
+            self.sendMessage('CRITICAL', 'Can\'t load trading config - ' + configPath, {"error": e})
         finally:
             del configPath
 
-    def loadStrategies(self):
-        strategyNames = os.getenv('SIGNAL_STRATEGIES', '').split(',')
-        strategies = []
-
-        for name in strategy_names:
-            module = __import__('signalX', fromlist=[name])
-            strategy_class = getattr(module, name)
-            strategies.append(strategy_class())
-
-        return strategies
-
     def startBot(self):
-        self.cache.sendMessage('OK', 'Bot has been launched', {})
+        self.sendMessage('OK', 'Bot has been launched', {})
 
         # todo: условия что все ок
         while True:
