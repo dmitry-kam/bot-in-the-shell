@@ -1,6 +1,6 @@
 {
-  "COIN_A": "ETH",
-  "COIN_B": "USDT",
+  "COIN": "ETH",
+  "STABLECOIN": "USDT",
   "DEPOSIT_MODE": "STABLE",
   "DEPOSIT_MODE_DESCRIPTION": "STABLE - используемый ботом депозит не растет, прибыль откладывается; DYNAMIC - весь депозит идет в работу",
   "DEPOSIT_VALUE_B": 1000,

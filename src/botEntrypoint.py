@@ -13,13 +13,18 @@ class BotEntrypointClass():
 
     # attributes
     exchangeInstance = None
-    tradingConfig = None
+    signalsConfig = None
     cache = None
     cacheSubscriber = None
     elasticSearchConnection = None
     databaseConnection = None
     loggers = []
     signals = []
+
+    # trading
+    # BUY | SELL | WAIT
+    mode = None
+    exchangeConfig = None
 
     def __new__(cls, *args, **kwargs):
         if cls.botInstance is None:
@@ -32,7 +37,7 @@ class BotEntrypointClass():
         self.initElastic()
         self.initDatabase()
         self.initExchange()
-        self.loadTradingConfig()
+        self.loadsignalsConfig()
         self.setSignals()
 
         self.startBot()
@@ -64,13 +69,28 @@ class BotEntrypointClass():
         del dbParams
 
     def initExchange(self):
-        exchangeStrategy = importlib.import_module('exchange.' + os.environ['EXCHANGE'] + 'Strategy')
-        exchangeClass = getattr(exchangeStrategy, os.environ['EXCHANGE'] + 'Strategy')
-        self.exchangeInstance = exchangeClass()
-        self.exchangeInstance.connect()
-        del exchangeStrategy, exchangeClass
-        
-        self.exchangeInstance.initCache(self.cache)
+        configPath = os.path.dirname(os.path.realpath(__file__)) + '/../' + os.environ['EXCHANGE_COMMON_PARAMETERS']
+        try:
+            if os.path.isfile(configPath):
+                with open(configPath) as file:
+                    self.exchangeConfig = orjson.loads(file.read())
+                    file.close()
+
+            if self.exchangeConfig is None:
+                raise Exception("Bad JSON")
+            else:
+                exchangeStrategy = importlib.import_module('exchange.' + os.environ['EXCHANGE'] + 'Strategy')
+                exchangeClass = getattr(exchangeStrategy, os.environ['EXCHANGE'] + 'Strategy')
+                self.exchangeInstance = exchangeClass()
+                self.exchangeInstance.initCache(self.cache)
+                self.exchangeInstance.initConfig(self.exchangeConfig)
+                self.sendMessage('OK', 'Exchange config has loaded - ' + configPath, self.exchangeConfig)
+                self.exchangeInstance.connect()
+                del exchangeStrategy, exchangeClass
+        except Exception as e:
+            self.sendMessage('CRITICAL', 'Can\'t load exchange config - ' + configPath, {"error": e})
+        finally:
+            del configPath
 
     def setLoggers(self):
         loggersList = os.environ['LOGGERS_LIST'].split(',')
@@ -85,6 +105,14 @@ class BotEntrypointClass():
 
         del loggersList, loggersStrategies, loggerName
 
+    def getAllMessages(self):
+        while True:
+            message = self.cacheSubscriber.get_message()
+            if message and message['type'] == 'message':
+                continue
+            else:
+                break
+
     def handleLogMessage(self, channelEvent):
         try:
             messageDTO = orjson.loads(channelEvent['data'])
@@ -92,11 +120,13 @@ class BotEntrypointClass():
                                              messageDTO['context'], messageDTO['time'])
             for logger in self.loggers:
                 logger.log(level, message, context, time)
+            # recursive check current messages
+            self.getAllMessages()
         except Exception as e:
             self.sendMessage('WARNING', 'Bad log message! ' + str(e), {})
 
     def setSignals(self):
-        signalList = list(self.tradingConfig['SIGNALS'].keys())
+        signalList = list(self.signalsConfig['SIGNALS'].keys())
         signalStrategies = importlib.import_module('signalX')
         signalName = None
 
@@ -105,7 +135,7 @@ class BotEntrypointClass():
             signalClass = getattr(signalClass, signalName)
             if signalClass.isSuitable(signalList):
                 self.signals.append(signalClass(
-                    self.tradingConfig,
+                    self.signalsConfig,
                     self.cache,
                     self.elasticSearchConnection,
                     self.databaseConnection
@@ -120,18 +150,18 @@ class BotEntrypointClass():
     def sendMessage(self, level: str, message: str, context: dict):
         self.cache.sendMessage(level, message, context)
 
-    def loadTradingConfig(self):
+    def loadsignalsConfig(self):
         configPath = os.path.dirname(os.path.realpath(__file__)) + '/../' + os.environ['TRADING_STRATEGY_CONFIG']
         try:
             if os.path.isfile(configPath):
                 with open(configPath) as file:
-                    self.tradingConfig = orjson.loads(file.read())
+                    self.signalsConfig = orjson.loads(file.read())
                     file.close()
 
-            if self.tradingConfig is None:
+            if self.signalsConfig is None:
                 raise Exception("Bad JSON")
             else:
-                self.sendMessage('OK', 'Trading strategy has loaded - ' + configPath, self.tradingConfig)
+                self.sendMessage('OK', 'Trading strategy has loaded - ' + configPath, self.signalsConfig)
         except Exception as e:
             self.sendMessage('CRITICAL', 'Can\'t load trading config - ' + configPath, {"error": e})
         finally:
@@ -139,16 +169,26 @@ class BotEntrypointClass():
 
     def startBot(self):
         self.sendMessage('OK', 'Bot has been launched', {})
+        self.exchangeInstance.getBalance()
+        # at once
+        self.getAllMessages()
 
         # todo: условия что все ок
         while True:
-            self.cacheSubscriber.get_message()
+            self.getAllMessages()
 
-            time.sleep(3)
+            print(self.exchangeInstance.getMarketData('ETH'))
+
+            time.sleep(1.01)
             #time.sleep(int(os.environ['SLEEP_DURATION']))
+
+            # получаем текущую ситуацию на рынке
+            # цикл по всем сигналам
+            # считаем финальный вес
+            # если больше уверенности по конфигу - ставим ордер
+            # текущий статус и инфу по ордеру держим в кэше, пишем в базу, если упали
 
 
 x = BotEntrypointClass()
 
 # self.cache.set('timeY', time.time())
-# self.exchangeInstance.getBalance()

@@ -4,6 +4,10 @@ import os
 class exchangeAbstractClass(ABC):
     session=None
     cache=None
+    config=None
+
+    def sendMessage(self, level: str, message: str, context: dict):
+        self.cache.sendMessage(level, message, context)
 
     def connect(self):
         print('Exchange Abstract Class')
@@ -11,31 +15,32 @@ class exchangeAbstractClass(ABC):
     def initCache(self, cacheConnection):
         self.cache = cacheConnection
 
+    def initConfig(self, config):
+        self.config = config
+
     @abstractmethod
     def getBalance(self):
         pass
 
+    def checkCandle(self, currentDeposit: float) -> bool:
+        # todo:
+        pass
 
-    #
-    # @abstractmethod
-    # def get_account_balance(self):
-    #     pass
-    #
-    # @abstractmethod
-    # def getMarketData(self, symbol):
-    #     pass
-    #
-    # @abstractmethod
-    # def placeOrder(self, symbol, quantity, order_type, price=None):
-    #     pass
-    #
-    # @abstractmethod
-    # def cancelOder(self, order_id):
-    #     pass
-    #
-    # @abstractmethod
-    # def checkOrder(self, order_id):
-    #     pass
+    @abstractmethod
+    def getMarketData(self, symbol):
+        pass
+
+    @abstractmethod
+    def placeOrder(self, symbol, quantity, orderType, price=None):
+        pass
+
+    @abstractmethod
+    def cancelOder(self, orderId):
+        pass
+
+    @abstractmethod
+    def checkOrder(self, orderId):
+        pass
 
 
 

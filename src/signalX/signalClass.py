@@ -10,6 +10,14 @@ class SignalClass(ABC):
     databaseConnection = None
 
     strategyName = None
+    strategyAnswer = {
+        "BUY": None,
+        "SELL": None,
+        "HOLD": None,
+        "WAIT": None,
+        "MODIFIERS": [],
+        "BLOCKERS": []
+    }
 
     @staticmethod
     def isSuitable(names: list) -> bool:
@@ -32,5 +40,5 @@ class SignalClass(ABC):
         pass
 
     @abstractmethod
-    def calculate(self, ticker: str, current_price: float) -> dict:
+    def calculate(self, ticker: str, currentPrice: float) -> dict:
         pass

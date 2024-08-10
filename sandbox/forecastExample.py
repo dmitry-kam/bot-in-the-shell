@@ -7,22 +7,23 @@ HISTORY_INDEX_PREFIX = 'daily_' if len(sys.argv) == 1 else 'daily_' + sys.argv[1
 print(HISTORY_INDEX_PREFIX)
 
 # print((os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["TRADE_PAIRS_CONFIG"]))
-if (os.path.isfile(os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["TRADE_PAIRS_CONFIG"])):
-    with open(os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["TRADE_PAIRS_CONFIG"]) as file:
-        fileContent = file.read()
-        t = orjson.loads(fileContent)
-        file.close()
-if (os.path.isfile(os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["EXCHANGE_COMMON_PARAMETERS"])):
-    with open(os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["EXCHANGE_COMMON_PARAMETERS"]) as file:
-        fileContent = file.read()
-        e = orjson.loads(fileContent)
-        file.close()
+# configs/tradePairs/example.json ~ first
+# if (os.path.isfile(os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["TRADE_PAIRS_CONFIG"])):
+#     with open(os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["TRADE_PAIRS_CONFIG"]) as file:
+#         fileContent = file.read()
+#         t = orjson.loads(fileContent)
+#         file.close()
+# if (os.path.isfile(os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["EXCHANGE_COMMON_PARAMETERS"])):
+#     with open(os.path.dirname(os.path.realpath(__file__)) + "/../" + os.environ["EXCHANGE_COMMON_PARAMETERS"]) as file:
+#         fileContent = file.read()
+#         e = orjson.loads(fileContent)
+#         file.close()
 
-print(e['feeType'])
-print(t['TRADING_STRATEGY_ETHUSDT']['COIN_A'])
+# print(e['feeType'])
+# print(t['TRADING_STRATEGY_ETHUSDT']['COIN_A'])
 
 
-# если вчера падал, то сегодня ... (недельный тренд + вчера)
+# todo если вчера падал, то сегодня ... (недельный тренд + вчера)
 
 
 es = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])

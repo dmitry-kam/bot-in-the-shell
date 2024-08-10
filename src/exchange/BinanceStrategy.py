@@ -4,11 +4,19 @@ import os
 
 class BinanceStrategy(exchangeAbstractClass):
     def connect(self):
-        print('BinanceStrategy')
-        print('=============')
+        self.sendMessage('INFO', 'BinanceStrategy has chosen', {})
 
     def initCache(self):
         pass
 
     def getBalance(self):
-        print('can\'t do it')
+        pass
+
+    def getMarketData(self, symbol):
+        pass
+
+    def cancelOder(self, orderId):
+        pass
+
+    def checkOrder(self, orderId):
+        pass
