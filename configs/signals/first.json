@@ -23,11 +23,11 @@
       "TIME_TO_WAIT_DESCRIPTION": "Время (с) ожидания до отмены ордера"
   },
   "SIGNALS": {
-      "signalOne": {
-        "CONFIG": 1
+      "buyAlways": {
+        "WEIGHT": 1.0
       },
-      "KLINE": {
-
+      "sellAlways": {
+        "WEIGHT": 1.0
       }
   },
   "BEHAVIORAL_MODIFICATORS": ["WAIT_UNTIL_INCREASE"]

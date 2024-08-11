@@ -1,5 +1,6 @@
 from .exchangeAbstractClass import exchangeAbstractClass
 from elasticsearch import Elasticsearch
+from datetime import datetime
 import os
 
 
@@ -43,13 +44,28 @@ class TestStrategy(exchangeAbstractClass):
         except StopIteration:
             return None
 
+    # ordered by time price generator
     def getPriceGenerator(self):
         for currentDay in self.marketSequence:
-            yield currentDay['_source']['openPrice']
-            yield currentDay['_source']['highPrice']
-            yield currentDay['_source']['avgPrice']
-            yield currentDay['_source']['lowPrice']
-            yield currentDay['_source']['closePrice']
+            currentDay = currentDay['_source']
+
+            timeHigh = datetime.fromisoformat(currentDay['timeHigh'])
+            timeLow = datetime.fromisoformat(currentDay['timeLow'])
+            timeAvg = str((max(timeHigh, timeLow) - min(timeHigh, timeLow)) / 2 + min(timeHigh, timeLow))
+
+            currentDayPrices = {
+                currentDay['timeOpen']: currentDay['openPrice'],
+                currentDay['timeHigh']: currentDay['highPrice'],
+                timeAvg: currentDay['avgPrice'],
+                currentDay['timeLow']: currentDay['lowPrice'],
+                currentDay['timeClose']: currentDay['closePrice'],
+            }
+
+            currentDayPrices = dict(sorted(currentDayPrices.items(), key = lambda x:x[0]))
+
+            for time, price in currentDayPrices.items():
+                yield {'price': price, 'time': time}
+                next(iter(currentDayPrices))
 
     def cancelOder(self, orderId):
         pass

@@ -5,12 +5,13 @@ class SignalClass(ABC):
     # any strategy should have all tools
     tradingConfig = None
     signalConfig = None
+    signalWeight = None
     cache = None
     elasticSearchConnection = None
     databaseConnection = None
 
-    strategyName = None
-    strategyAnswer = {
+    signalName = None
+    signalAnswer = {
         "BUY": None,
         "SELL": None,
         "HOLD": None,
@@ -25,20 +26,21 @@ class SignalClass(ABC):
 
     def __init__(self, tradingConfig, cache, elasticSearchConnection, databaseConnection):
         self.tradingConfig = tradingConfig
-        self.setStrategyName()
-        self.signalConfig = tradingConfig['SIGNALS'][self.strategyName]
+        self.setSignalName()
+        self.signalConfig = tradingConfig['SIGNALS'][self.signalName]
+        self.signalWeight = self.signalConfig['WEIGHT']
         self.cache = cache
         self.elasticSearchConnection = elasticSearchConnection
         self.databaseConnection = databaseConnection
-        self.sendMessage('INFO', 'Init Signal - ' + self.strategyName, self.signalConfig)
+        self.sendMessage('INFO', 'Init Signal - ' + self.signalName, self.signalConfig)
 
     def sendMessage(self, level: str, message: str, context: dict):
         self.cache.sendMessage(level, message, context)
 
     @abstractmethod
-    def setStrategyName(self):
+    def setSignalName(self):
         pass
 
     @abstractmethod
-    def calculate(self, ticker: str, currentPrice: float) -> dict:
+    def getWeightedForecast(self, time: str) -> dict:
         pass

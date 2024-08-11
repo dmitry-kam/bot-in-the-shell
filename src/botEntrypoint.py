@@ -22,8 +22,8 @@ class BotEntrypointClass():
     signals = []
 
     # trading
-    # BUY | SELL | WAIT
-    mode = None
+    # BUY | SELL | HOLD | WAIT
+    mode = 'BUY'
     exchangeConfig = None
 
     def __new__(cls, *args, **kwargs):
@@ -167,6 +167,13 @@ class BotEntrypointClass():
         finally:
             del configPath
 
+    def setMode(self, mode):
+        self.mode = mode
+        self.cache.setKeyValue('BOT_MODE', mode)
+
+    def getMode(self):
+        return self.mode
+
     def startBot(self):
         self.sendMessage('OK', 'Bot has been launched', {})
         self.exchangeInstance.getBalance()
@@ -190,5 +197,3 @@ class BotEntrypointClass():
 
 
 x = BotEntrypointClass()
-
-# self.cache.set('timeY', time.time())

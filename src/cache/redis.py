@@ -38,6 +38,7 @@ class RedisCustom():
 
     def setKeyValue(self, key, value):
         self.redisConnection.set(key, value)
+
     def getKeyValue(self, key):
         self.redisConnection.get(key)
 

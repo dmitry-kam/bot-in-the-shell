@@ -42,6 +42,8 @@ class exchangeAbstractClass(ABC):
     def checkOrder(self, orderId):
         pass
 
-
+    def now(self):
+        now = datetime.datetime.now()
+        return str(now)
 
     # todo принимать числа
