@@ -3,3 +3,5 @@
 /migrations/tmp/
 /sandbox/tmp/
 /venv/
+/configs/exchange/private/
+/configs/signals/private/

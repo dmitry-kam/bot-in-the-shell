@@ -1,6 +1,8 @@
 from elasticsearch import Elasticsearch
+from collections import defaultdict
 from cache import redis
 import importlib
+import jstyleson
 import datetime
 import psycopg2
 import orjson
@@ -22,7 +24,7 @@ class BotEntrypointClass():
     signals = []
 
     # trading
-    # BUY | SELL | HOLD | WAIT
+    availableModes = ['BUY', 'SELL', 'HOLD', 'WAIT']
     mode = 'BUY'
     exchangeConfig = None
 
@@ -37,9 +39,9 @@ class BotEntrypointClass():
         self.initElastic()
         self.initDatabase()
         self.initExchange()
-        self.loadsignalsConfig()
+        self.loadSignalsConfig()
         self.setSignals()
-
+        ###############
         self.startBot()
 
     def __del__(self):
@@ -73,7 +75,7 @@ class BotEntrypointClass():
         try:
             if os.path.isfile(configPath):
                 with open(configPath) as file:
-                    self.exchangeConfig = orjson.loads(file.read())
+                    self.exchangeConfig = jstyleson.loads(file.read())
                     file.close()
 
             if self.exchangeConfig is None:
@@ -150,12 +152,12 @@ class BotEntrypointClass():
     def sendMessage(self, level: str, message: str, context: dict):
         self.cache.sendMessage(level, message, context)
 
-    def loadsignalsConfig(self):
+    def loadSignalsConfig(self):
         configPath = os.path.dirname(os.path.realpath(__file__)) + '/../' + os.environ['TRADING_STRATEGY_CONFIG']
         try:
             if os.path.isfile(configPath):
                 with open(configPath) as file:
-                    self.signalsConfig = orjson.loads(file.read())
+                    self.signalsConfig = jstyleson.loads(file.read())
                     file.close()
 
             if self.signalsConfig is None:
@@ -168,11 +170,54 @@ class BotEntrypointClass():
             del configPath
 
     def setMode(self, mode):
-        self.mode = mode
-        self.cache.setKeyValue('BOT_MODE', mode)
+        if mode in self.availableModes:
+            self.mode = mode
+            self.cache.setKeyValue('BOT_MODE', mode)
+        else:
+            self.sendMessage('ERROR', 'Unknown mode: ' + mode, {'currentMode': self.mode})
 
     def getMode(self):
         return self.mode
+
+    def aggregateAnswer(self, decisions):
+        sums = defaultdict(float)
+        counts = defaultdict(int)
+        uniqueModifiers = set()
+        uniqueBlockers = set()
+
+        for entry in decisions:
+            for key in self.availableModes:
+                value = entry.get(key)
+                if value is not None:
+                    sums[key] += value
+                    counts[key] += 1
+
+            uniqueModifiers.update(entry.get('MODIFIERS', []))
+            uniqueBlockers.update(entry.get('BLOCKERS', []))
+
+        answer = {key: (sums[key] / counts[key]) if counts[key] > 0 else None for key in self.availableModes}
+
+        answer['MODIFIERS'] = list(uniqueModifiers)
+        answer['BLOCKERS'] = list(uniqueBlockers)
+
+        return answer
+
+    def makeDecision(self, forecast):
+        print("##### Сегодня " + source['timeOpen'] + ". У меня " + str(deposit) + "$$$")
+        if waitMode == False:
+            if currentOrderType == "BUY":
+                makeOrder((source['openPrice'] if closedAll == 0 else source['closePrice']) * 0.97)
+            elif currentOrderType == "SELL":
+                makeOrder(source['openPrice'] * 1.03)
+
+            print("===== Жду закрытия ордера " + currentOrderType + " уже " + str(wait) + "дней")
+            if checkOrder(source):
+                currentOrderType = "BUY" if currentOrderType == "SELL" else "SELL"
+        else:
+            print("===== Жду закрытия ордера " + currentOrderType + " уже " + str(wait) + "дней")
+            if checkOrder(source):
+                currentOrderType = "BUY" if currentOrderType == "SELL" else "SELL"
+
 
     def startBot(self):
         self.sendMessage('OK', 'Bot has been launched', {})
@@ -184,14 +229,30 @@ class BotEntrypointClass():
         while True:
             self.getAllMessages()
 
-            print(self.exchangeInstance.getMarketData('ETH'))
+            # exchange -> bot
+            currentMarketData = self.exchangeInstance.getMarketData('ETH')
+            if currentMarketData is None:
+                self.sendMessage('ERROR', 'Exchange response error', {})
+
+            currentPrice, currentTime = currentMarketData['price'], currentMarketData['time']
+            commonForecast = []
+            aggregatedAnswer = None
+
+            # bot -> signal -> bot
+            for signal in self.signals:
+                signalAnswer = signal.getWeightedForecast(currentTime)
+                print(currentPrice, currentTime)
+                print(signal.signalName, signalAnswer)
+                commonForecast.append(signalAnswer)
+
+            # todo: blockers-modificators (сначала подключаем все? тут просто вызываем)
+
+            aggregatedAnswer = self.aggregateAnswer(commonForecast)
+            self.makeDecision(aggregatedAnswer)
 
             time.sleep(1.01)
             #time.sleep(int(os.environ['SLEEP_DURATION']))
 
-            # получаем текущую ситуацию на рынке
-            # цикл по всем сигналам
-            # считаем финальный вес
             # если больше уверенности по конфигу - ставим ордер
             # текущий статус и инфу по ордеру держим в кэше, пишем в базу, если упали
 
