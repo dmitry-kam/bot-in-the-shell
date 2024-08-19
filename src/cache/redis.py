@@ -8,6 +8,7 @@ class RedisCustom():
     cacheInstance = None
     redisConnection = None
     logsChannel = 'logs'
+    orderChannel = 'orders'
 
     def __new__(cls, *args, **kwargs):
         if cls.cacheInstance is None:
@@ -16,7 +17,7 @@ class RedisCustom():
 
     def __init__(self):
         print('Init cache')
-        self.redisConnection = StrictRedis(host=os.environ['REDIS_HOST'], port=os.environ['REDIS_PORT'], db=0)
+        self.redisConnection = StrictRedis(host=os.environ['REDIS_HOST'], port=os.environ['REDIS_PORT'], db=0, decode_responses=True)
 
     def now(self):
         now = datetime.datetime.now()
@@ -33,12 +34,18 @@ class RedisCustom():
             "time": self.now()
         }
 
-    def sendMessage(self, level: str, message: str, context: dict):
+    def logEvent(self, level: str, message: str, context: dict):
         self.redisConnection.publish(self.logsChannel, self.getMessageString(level, message, context))
+
+    def orderEvent(self, context: dict):
+        self.redisConnection.publish(self.orderChannel, orjson.dumps(context))
 
     def setKeyValue(self, key, value):
         self.redisConnection.set(key, value)
 
     def getKeyValue(self, key):
-        self.redisConnection.get(key)
+        return self.redisConnection.get(key)
+
+    def delete(self, key):
+        self.redisConnection.delete(key)
 

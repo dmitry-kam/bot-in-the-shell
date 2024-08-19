@@ -10,6 +10,7 @@ class loggerClass(ABC):
         'info_status': "INFO",
         'debug_status': "DEBUG"
     }
+    loggedStatuses = []
     endof = '\033[0m'
     color_blue = '\033[94m'
     color_cyan = '\033[96m'
@@ -24,3 +25,10 @@ class loggerClass(ABC):
 
     @abstractmethod
     def log(self, level: str, message: str, context: dict, time: str) -> None: pass
+
+    # @abstractmethod
+    def setLoggedStatuses(self, statuses: list) -> None:
+        if len(statuses) == 0:
+            statuses = self.statuses.values()
+        self.loggedStatuses = list(statuses)
+        pass

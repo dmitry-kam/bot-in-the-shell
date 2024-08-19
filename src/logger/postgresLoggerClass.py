@@ -24,11 +24,16 @@ class postgresLoggerClass(loggerClass):
         self.cursor.close()
         self.connection.close()
 
+    # def setLoggedStatuses(self, statuses: list) -> None:
+    #     pass
+
     @staticmethod
     def isSuitable(names: list) -> bool:
         return 'postgres' in names
 
     def log(self, level: str, message: str, context: dict, time: str) -> None:
+        if level not in self.loggedStatuses:
+            return None
         try:
             self.cursor.execute("INSERT INTO public.logs (data, level, message, timestamp) VALUES (%s, %s, %s, %s)",
                         (json.dumps(context), level, message, time))

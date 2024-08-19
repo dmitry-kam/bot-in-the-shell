@@ -7,7 +7,7 @@ class exchangeAbstractClass(ABC):
     config=None
 
     def sendMessage(self, level: str, message: str, context: dict):
-        self.cache.sendMessage(level, message, context)
+        self.cache.logEvent(level, message, context)
 
     def connect(self):
         print('Exchange Abstract Class')

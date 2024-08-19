@@ -47,11 +47,17 @@ class BotEntrypointClass():
     def __del__(self):
         print('Bot has stopped')
 
+    def now(self):
+        now = datetime.datetime.now()
+        return str(now)
+
     def initCache(self):
         self.cache = redis.RedisCustom()
         print('Init subscribers')
         self.cacheSubscriber = self.cache.redisConnection.pubsub()
-        self.cacheSubscriber.psubscribe(**{self.cache.logsChannel: self.handleLogMessage})
+        self.cacheSubscriber.psubscribe(**{self.cache.logsChannel: self.onLogMessage})
+        # exchange (socket/http/emulator) -> event -> redis -> bot
+        self.cacheSubscriber.psubscribe(**{self.cache.orderChannel: self.onOrderMessage})
 
     def initElastic(self):
         self.elasticSearchConnection = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])
@@ -89,6 +95,9 @@ class BotEntrypointClass():
                 self.sendMessage('OK', 'Exchange config has loaded - ' + configPath, self.exchangeConfig)
                 self.exchangeInstance.connect()
                 del exchangeStrategy, exchangeClass
+
+                self.exchangeInstance.setBalance(self.exchangeConfig['STABLECOIN'], self.exchangeConfig['STABLECOIN_DEPOSIT'])
+                self.exchangeInstance.setBalance(self.exchangeConfig['COIN'], 0)
         except Exception as e:
             self.sendMessage('CRITICAL', 'Can\'t load exchange config - ' + configPath, {"error": e})
         finally:
@@ -98,16 +107,25 @@ class BotEntrypointClass():
         loggersList = os.environ['LOGGERS_LIST'].split(',')
         loggersStrategies = importlib.import_module('logger')
         loggerName = None
+        i = 0
 
         for loggerName in loggersStrategies.__all__:
             loggerClass = importlib.import_module('logger.' + loggerName)
             loggerClass = getattr(loggerClass, loggerName)
             if loggerClass.isSuitable(loggersList):
-                self.loggers.append(loggerClass())
+                loggerInstance = loggerClass()
+                try:
+                    print(loggersList[i].upper()+'_LOGGED_LIST')
+                    statuses = os.environ[loggersList[i].upper()+'_LOGGED_LIST'].split(',')
+                    loggerInstance.setLoggedStatuses(statuses)
+                except Exception:
+                    loggerInstance.setLoggedStatuses([])
+                self.loggers.append(loggerInstance)
+            i += 1
 
         del loggersList, loggersStrategies, loggerName
 
-    def getAllMessages(self):
+    def getAllLogMessages(self):
         while True:
             message = self.cacheSubscriber.get_message()
             if message and message['type'] == 'message':
@@ -115,7 +133,7 @@ class BotEntrypointClass():
             else:
                 break
 
-    def handleLogMessage(self, channelEvent):
+    def onLogMessage(self, channelEvent):
         try:
             messageDTO = orjson.loads(channelEvent['data'])
             level, message, context, time = (messageDTO['level'], messageDTO['message'],
@@ -123,9 +141,26 @@ class BotEntrypointClass():
             for logger in self.loggers:
                 logger.log(level, message, context, time)
             # recursive check current messages
-            self.getAllMessages()
+            self.getAllLogMessages()
         except Exception as e:
             self.sendMessage('WARNING', 'Bad log message! ' + str(e), {})
+
+    def onOrderMessage(self, channelEvent):
+        try:
+            orderDTO = orjson.loads(channelEvent['data'])
+
+            orderMode = orderDTO['ORDER_TYPE']
+            self.setMode("BUY" if orderMode == "SELL" else "SELL")
+
+            # todo deposits
+            #     'COIN_AMOUNT': coinValue,
+            #     'STABLECOIN_AMOUNT': deposit,
+            #     'FEE_SUM': feeSum
+
+            for logger in self.loggers:
+                logger.log('OK', 'Order completed', orderDTO, self.now())
+        except Exception as e:
+            self.sendMessage('WARNING', 'Bad order message! ' + str(e), {})
 
     def setSignals(self):
         signalList = list(self.signalsConfig['SIGNALS'].keys())
@@ -150,7 +185,7 @@ class BotEntrypointClass():
         print('selfCheck')
 
     def sendMessage(self, level: str, message: str, context: dict):
-        self.cache.sendMessage(level, message, context)
+        self.cache.logEvent(level, message, context)
 
     def loadSignalsConfig(self):
         configPath = os.path.dirname(os.path.realpath(__file__)) + '/../' + os.environ['TRADING_STRATEGY_CONFIG']
@@ -179,7 +214,7 @@ class BotEntrypointClass():
     def getMode(self):
         return self.mode
 
-    def aggregateAnswer(self, decisions):
+    def aggregateAnswer(self, decisions: list):
         sums = defaultdict(float)
         counts = defaultdict(int)
         uniqueModifiers = set()
@@ -202,55 +237,71 @@ class BotEntrypointClass():
 
         return answer
 
-    def makeDecision(self, forecast):
-        print("##### Сегодня " + source['timeOpen'] + ". У меня " + str(deposit) + "$$$")
-        if waitMode == False:
-            if currentOrderType == "BUY":
-                makeOrder((source['openPrice'] if closedAll == 0 else source['closePrice']) * 0.97)
-            elif currentOrderType == "SELL":
-                makeOrder(source['openPrice'] * 1.03)
+    def makeDecision(self, currentPrice: float, currentTime: str, forecast: dict):
+        currentMode = self.getMode()
+        #self.sendMessage('NOTICE', 'Current time: ' + currentTime + ', price = ' + str(currentPrice), {})
+        #self.sendMessage('INFO', 'Mode: ' + self.getMode() + ', deposit = ' + str(self.exchangeInstance.getBalance()), {})
 
-            print("===== Жду закрытия ордера " + currentOrderType + " уже " + str(wait) + "дней")
-            if checkOrder(source):
-                currentOrderType = "BUY" if currentOrderType == "SELL" else "SELL"
-        else:
-            print("===== Жду закрытия ордера " + currentOrderType + " уже " + str(wait) + "дней")
-            if checkOrder(source):
-                currentOrderType = "BUY" if currentOrderType == "SELL" else "SELL"
+        # order:
+        # bot(makeDecision) -> exchange(order) -> check order -> redis(orderEvent) -> bot(onOrderMessage) -> change status
+
+        if currentMode == 'WAIT':
+            #self.sendMessage('DEBUG', 'Just waiting', {})
+            pass
+        elif currentMode == 'BUY' and forecast['BUY'] >= self.signalsConfig['BUY_MIN_CONFIDENCE']:
+            #print(currentPrice * (1.0 - float(self.signalsConfig['ORDER_REWARD_PERCENT'])))
+            self.exchangeInstance.placeOrder('BUY', currentPrice * (1.0 - float(self.signalsConfig['ORDER_REWARD_PERCENT'])), 1.0)
+            self.setMode('WAIT')
+        elif currentMode == 'SELL' and forecast['SELL'] >= self.signalsConfig['SELL_MIN_CONFIDENCE']:
+            #print(currentPrice * (1.0 + float(self.signalsConfig['ORDER_REWARD_PERCENT'])))
+            self.exchangeInstance.placeOrder('SELL', currentPrice * (1.0 + float(self.signalsConfig['ORDER_REWARD_PERCENT'])), 1.0)
+            self.setMode('WAIT')
+        elif currentMode == 'HOLD':
+            pass
+
+        # todo wait сделать таймеры и слипы внутри
 
 
     def startBot(self):
         self.sendMessage('OK', 'Bot has been launched', {})
-        self.exchangeInstance.getBalance()
         # at once
-        self.getAllMessages()
+        self.getAllLogMessages()
 
         # todo: условия что все ок
         while True:
-            self.getAllMessages()
+            self.getAllLogMessages()
 
             # exchange -> bot
             currentMarketData = self.exchangeInstance.getMarketData('ETH')
             if currentMarketData is None:
-                self.sendMessage('ERROR', 'Exchange response error', {})
+                # todo test/prod
+                self.sendMessage('ERROR', 'Exchange response error. Stop bot', {})
+                self.__del__()
 
+            #print(currentMarketData)
             currentPrice, currentTime = currentMarketData['price'], currentMarketData['time']
             commonForecast = []
-            aggregatedAnswer = None
 
             # bot -> signal -> bot
             for signal in self.signals:
                 signalAnswer = signal.getWeightedForecast(currentTime)
-                print(currentPrice, currentTime)
-                print(signal.signalName, signalAnswer)
+                # self.sendMessage('DEBUG', 'signalAnswer', {
+                #     'currentPrice': currentPrice,
+                #     'currentTime': currentTime,
+                #     'signalName': signal.signalName,
+                #     'signalAnswer': signalAnswer})
+
                 commonForecast.append(signalAnswer)
 
+            # todo: надо учесть лаг на расчеты
             # todo: blockers-modificators (сначала подключаем все? тут просто вызываем)
 
             aggregatedAnswer = self.aggregateAnswer(commonForecast)
-            self.makeDecision(aggregatedAnswer)
 
-            time.sleep(1.01)
+            # bot -> exchange
+            self.makeDecision(currentPrice, currentTime, aggregatedAnswer)
+
+            time.sleep(0.01)
             #time.sleep(int(os.environ['SLEEP_DURATION']))
 
             # если больше уверенности по конфигу - ставим ордер

@@ -35,7 +35,7 @@ class SignalClass(ABC):
         self.sendMessage('INFO', 'Init Signal - ' + self.signalName, self.signalConfig)
 
     def sendMessage(self, level: str, message: str, context: dict):
-        self.cache.sendMessage(level, message, context)
+        self.cache.logEvent(level, message, context)
 
     @abstractmethod
     def setSignalName(self):

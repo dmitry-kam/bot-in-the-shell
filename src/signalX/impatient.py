@@ -1,7 +1,7 @@
 from .signalClass import SignalClass
 
 
-class signalOne(SignalClass):
+class impatient(SignalClass):
 
     @staticmethod
     def isSuitable(names: list) -> bool:
@@ -11,4 +11,6 @@ class signalOne(SignalClass):
         self.signalName = __class__.__name__
 
     def getWeightedForecast(self, time: str) -> dict:
-        return self.signalAnswer
+        answer = self.signalAnswer.copy()
+        answer['SELL'] = 1.0 * self.signalWeight
+        return answer

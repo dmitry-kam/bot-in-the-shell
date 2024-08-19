@@ -33,6 +33,7 @@ index = "daily_eth"
 data = es.search(index=index, query={"match_all": {}}, size=10000, sort='timeOpen')
 data = data['hits']['hits'][7:]
 data = data[-100:] # 4 квартал 2022
+#data = data[-:400] # 4 квартал 2022
 #data = data[1750:] # с конца 2021 (нисходящий тренд)
 
 currentOrderType = "BUY"
@@ -67,7 +68,7 @@ def checkOrder(day):
     global fee
     global feeSum
     global basta
-    # todo closePrice и openPrice сравнить
+
     if currentOrderType == "BUY":
         if day['openPrice'] <= currentOrderPrice or day['highPrice'] <= currentOrderPrice \
                 or day['lowPrice'] <= currentOrderPrice or day['closePrice'] <= currentOrderPrice:

@@ -15,6 +15,8 @@ class telegramLoggerClass(loggerClass):
         return 'telegram' in names
 
     def log(self, level: str, message: str, context: dict, time: str) -> None:
+        if level not in self.loggedStatuses:
+            return None
         formatted_message = self.handleMessage(level, message, time)
         try:
             self.bot.send_message(chat_id=self.channel_id, text=formatted_message)
@@ -23,3 +25,6 @@ class telegramLoggerClass(loggerClass):
 
     def handleMessage(self, level: str, message: str, time: str) -> str:
         return f"{level}: {message} {time}"
+    #
+    # def setLoggedStatuses(self, statuses: list) -> None:
+    #     pass

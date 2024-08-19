@@ -2,26 +2,25 @@ import os
 import psycopg2
 from psycopg2 import sql
 
-DB_PARAMS = {
-    'dbname': os.environ['POSTGRES_DB'],
-    'user': os.environ['POSTGRES_USER'],
-    'password': os.environ['POSTGRES_PASSWORD'],
-    'host': os.environ['POSTGRES_HOST'],
-    'port': os.environ['POSTGRES_PORT']
-}
-
-CREATE_TABLE_QUERY = """
-CREATE TABLE IF NOT EXISTS logs (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMPTZ DEFAULT NOW(),
-    level VARCHAR(50) NOT NULL,
-    message TEXT NOT NULL,
-    data JSONB
-);
-"""
-
-
 def create_logs_table():
+    DB_PARAMS = {
+        'dbname': os.environ['POSTGRES_DB'],
+        'user': os.environ['POSTGRES_USER'],
+        'password': os.environ['POSTGRES_PASSWORD'],
+        'host': os.environ['POSTGRES_HOST'],
+        'port': os.environ['POSTGRES_PORT']
+    }
+
+    CREATE_TABLE_QUERY = """
+    CREATE TABLE IF NOT EXISTS logs (
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMPTZ DEFAULT NOW(),
+        level VARCHAR(50) NOT NULL,
+        message TEXT NOT NULL,
+        data JSONB
+    );
+    """
+
     conn = psycopg2.connect(**DB_PARAMS)
     cur = conn.cursor()
 

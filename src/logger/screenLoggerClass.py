@@ -22,6 +22,8 @@ class screenLoggerClass(loggerClass):
         return output
 
     def log(self, level: str, message: str, context: dict, time: str) -> None:
+        if level not in self.loggedStatuses:
+            return None
         message = self.handleMessage(level, message, time)
         # colorize
         if level == self.statuses['alert_status']:
@@ -43,3 +45,6 @@ class screenLoggerClass(loggerClass):
         if {} != context:
             print(str(context))
             print('*' * self.terminal_length)
+
+    # def setLoggedStatuses(self, statuses: list) -> None:
+    #     pass
