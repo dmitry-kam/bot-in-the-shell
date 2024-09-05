@@ -25,6 +25,3 @@ class telegramLoggerClass(loggerClass):
 
     def handleMessage(self, level: str, message: str, time: str) -> str:
         return f"{level}: {message} {time}"
-    #
-    # def setLoggedStatuses(self, statuses: list) -> None:
-    #     pass

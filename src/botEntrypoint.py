@@ -9,7 +9,7 @@ import orjson
 import time
 import os
 
-class BotEntrypointClass():
+class BotEntrypointClass:
     # Singleton pattern
     botInstance = None
 
@@ -115,7 +115,6 @@ class BotEntrypointClass():
             if loggerClass.isSuitable(loggersList):
                 loggerInstance = loggerClass()
                 try:
-                    print(loggersList[i].upper()+'_LOGGED_LIST')
                     statuses = os.environ[loggersList[i].upper()+'_LOGGED_LIST'].split(',')
                     loggerInstance.setLoggedStatuses(statuses)
                 except Exception:

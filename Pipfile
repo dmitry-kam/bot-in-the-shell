@@ -21,12 +21,11 @@ asyncio = "3.4.3"
 jstyleson = "*"
 
 [scripts]
-generateDocumentation="bash docs/generateDocumentation.sh"
 #startBot={call = "src.botEntrypoint:BotEntrypointClass()"}
 #commandName = "python src/socketSniffer.py" # example
-#sniffer = {call = "sandbox.socketSniffer:ws_trades()"}
-#funcWithoutArgs = {call = "sandbox.envExample:getEnvVars()"}
-#funcWithArgs = {call = "sandbox.envExample:argsCheck('arg1', 'arg2')"} # пример вызова функции с аргументами
+#sniffer = {call = "sandbox.archive.socketSniffer:ws_trades()"}
+#funcWithoutArgs = {call = "sandbox.archive.envExample:getEnvVars()"}
+#funcWithArgs = {call = "sandbox.archive.envExample:argsCheck('arg1', 'arg2')"} # пример вызова функции с аргументами
 
 [dev-packages]
 

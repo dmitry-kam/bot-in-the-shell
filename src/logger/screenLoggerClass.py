@@ -45,6 +45,3 @@ class screenLoggerClass(loggerClass):
         if {} != context:
             print(str(context))
             print('*' * self.terminal_length)
-
-    # def setLoggedStatuses(self, statuses: list) -> None:
-    #     pass

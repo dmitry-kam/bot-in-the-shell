@@ -24,9 +24,6 @@ class postgresLoggerClass(loggerClass):
         self.cursor.close()
         self.connection.close()
 
-    # def setLoggedStatuses(self, statuses: list) -> None:
-    #     pass
-
     @staticmethod
     def isSuitable(names: list) -> bool:
         return 'postgres' in names

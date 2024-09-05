@@ -26,7 +26,6 @@ class loggerClass(ABC):
     @abstractmethod
     def log(self, level: str, message: str, context: dict, time: str) -> None: pass
 
-    # @abstractmethod
     def setLoggedStatuses(self, statuses: list) -> None:
         if len(statuses) == 0:
             statuses = self.statuses.values()

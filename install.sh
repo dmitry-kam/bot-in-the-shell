@@ -11,8 +11,8 @@ alias pipenv=~/.local/bin/pipenv
 pipenv install
 #pipenv run pip install psycopg2-binary
 #pipenv run pip install python-telegram-bot
-mkdir migrations/tmp sandbox/tmp
-chmod 777 -Rf migrations/tmp sandbox/tmp
+mkdir migrations/tmp sandbox/tmp configs/exchange/private configs/signals/private
+chmod 777 -Rf migrations/tmp sandbox/tmp configs/exchange/private configs/signals/private
 
 # docker-compose environment
 
