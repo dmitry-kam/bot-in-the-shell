@@ -35,7 +35,7 @@ class exchangeAbstractClass(ABC):
         pass
 
     @abstractmethod
-    def cancelOder(self, orderId):
+    def cancelOrder(self, orderId):
         pass
 
     @abstractmethod

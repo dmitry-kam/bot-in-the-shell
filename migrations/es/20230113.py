@@ -116,4 +116,4 @@ def convertCoinMarketObject(json):
     }
 
 # if __name__ == "__main__":
-#   migrate()
+migrate()

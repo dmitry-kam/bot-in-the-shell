@@ -32,7 +32,7 @@ index = "daily_eth"
 
 data = es.search(index=index, query={"match_all": {}}, size=10000, sort='timeOpen')
 data = data['hits']['hits'][7:]
-data = data[-100:] # 4 квартал 2022
+data = data[400:1500]
 #data = data[-:400] # 4 квартал 2022
 #data = data[1750:] # с конца 2021 (нисходящий тренд)
 
@@ -40,7 +40,7 @@ currentOrderType = "BUY"
 currentOrderPrice = 0.
 coinValue = 0.
 deposit = 1000
-fee = 0.0001
+fee = 0.001
 feeSum = 0
 profit = 0.
 waitMode = False
@@ -48,6 +48,7 @@ closedAll = 0
 wait = 0
 waitAll = 0
 basta = 10000
+profitPercent = 0.03
 
 def makeOrder(price):
     global currentOrderPrice
@@ -128,9 +129,9 @@ for day in data:
     print("##### Сегодня " + source['timeOpen'] + ". У меня " + str(deposit) + "$$$")
     if waitMode == False:
         if currentOrderType == "BUY":
-            makeOrder((source['openPrice'] if closedAll == 0 else source['closePrice'])*0.97)
+            makeOrder((source['openPrice'] if closedAll == 0 else source['closePrice']) * (1 - profitPercent))
         elif currentOrderType == "SELL":
-            makeOrder(source['openPrice']*1.03)
+            makeOrder(source['openPrice'] * (1 + profitPercent))
 
         print("===== Жду закрытия ордера " + currentOrderType + " уже " + str(wait) + "дней")
         if checkOrder(source):
@@ -146,5 +147,6 @@ print("closedAll: " + str(closedAll))
 print("waitAll: " + str(closedAll))
 
 print("Итого у меня к " + source['timeOpen'] + ".  " + str(deposit) + " $$$ и " + str(coinValue) + " ETH ")
+print("Депозит эквивалентен " + str(deposit if deposit > 0 else coinValue * source['openPrice']) + " $$$")
 
 # todo: реализовать продажу при падении на 1%, либо ожидание при росте

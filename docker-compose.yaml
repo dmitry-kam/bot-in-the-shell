@@ -39,11 +39,11 @@ services:
     networks:
       - bot-network
     volumes:
-      - postgresdata:/var/lib/postgresql/data
+      - postgresql-data:/var/lib/postgresql/data
 
 networks:
   bot-network:
     
 volumes:
   esdata:
-  postgresdata:
+  postgresql-data:

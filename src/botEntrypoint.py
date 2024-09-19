@@ -26,6 +26,9 @@ class BotEntrypointClass:
     # trading
     availableModes = ['BUY', 'SELL', 'HOLD', 'WAIT']
     mode = 'BUY'
+    # todo: подумать над этими параметрами
+    lastOrderPrice = 0.0
+    nextOrderPrice = 0.0
     exchangeConfig = None
 
     def __new__(cls, *args, **kwargs):
@@ -115,7 +118,9 @@ class BotEntrypointClass:
             if loggerClass.isSuitable(loggersList):
                 loggerInstance = loggerClass()
                 try:
-                    statuses = os.environ[loggersList[i].upper()+'_LOGGED_LIST'].split(',')
+                    statuses = os.environ[loggersList[i].upper()+'_LOGGED_LIST']
+                    if len(statuses) == 0:
+                        raise Exception("Empty status list for logger")
                     loggerInstance.setLoggedStatuses(statuses)
                 except Exception:
                     loggerInstance.setLoggedStatuses([])
@@ -149,7 +154,9 @@ class BotEntrypointClass:
             orderDTO = orjson.loads(channelEvent['data'])
 
             orderMode = orderDTO['ORDER_TYPE']
+            orderPrice = float(orderDTO['ORDER_PRICE'])
             self.setMode("BUY" if orderMode == "SELL" else "SELL")
+            self.setLastOrderPrice(orderPrice)
 
             # todo deposits
             #     'COIN_AMOUNT': coinValue,
@@ -213,6 +220,24 @@ class BotEntrypointClass:
     def getMode(self):
         return self.mode
 
+    def setLastOrderPrice(self, price: int):
+        self.lastOrderPrice = price
+        #self.cache.setKeyValue('', price)
+
+    def getLastOrderPrice(self):
+        return self.lastOrderPrice
+
+    def getNextOrderPrice(self, mode):
+        lastOrderPrice = self.getLastOrderPrice()
+
+        if self.nextOrderPrice > 0:
+            part = float(self.exchangeConfig['ORDER_REWARD_PERCENT'])
+            self.nextOrderPrice = lastOrderPrice * ((1.0 - part) if mode == 'BUY' else (1.0 + part))
+        else:
+            # use config price first
+            self.nextOrderPrice = lastOrderPrice
+        return self.nextOrderPrice
+
     def aggregateAnswer(self, decisions: list):
         sums = defaultdict(float)
         counts = defaultdict(int)
@@ -236,7 +261,8 @@ class BotEntrypointClass:
 
         return answer
 
-    def makeDecision(self, currentPrice: float, currentTime: str, forecast: dict):
+    def makeDecision(self, forecast: dict):
+        #currentPrice: float, currentTime: str,
         currentMode = self.getMode()
         #self.sendMessage('NOTICE', 'Current time: ' + currentTime + ', price = ' + str(currentPrice), {})
         #self.sendMessage('INFO', 'Mode: ' + self.getMode() + ', deposit = ' + str(self.exchangeInstance.getBalance()), {})
@@ -247,13 +273,14 @@ class BotEntrypointClass:
         if currentMode == 'WAIT':
             #self.sendMessage('DEBUG', 'Just waiting', {})
             pass
-        elif currentMode == 'BUY' and forecast['BUY'] >= self.signalsConfig['BUY_MIN_CONFIDENCE']:
-            #print(currentPrice * (1.0 - float(self.signalsConfig['ORDER_REWARD_PERCENT'])))
-            self.exchangeInstance.placeOrder('BUY', currentPrice * (1.0 - float(self.signalsConfig['ORDER_REWARD_PERCENT'])), 1.0)
+        elif currentMode == 'BUY' and forecast['BUY'] >= self.exchangeConfig['BUY_MIN_CONFIDENCE']:
+            # print(currentPrice)
+            # print(currentPrice * (1.0 - float(self.exchangeConfig['ORDER_REWARD_PERCENT'])))
+            self.exchangeInstance.placeOrder('BUY', self.getNextOrderPrice('BUY'), 1.0)
             self.setMode('WAIT')
-        elif currentMode == 'SELL' and forecast['SELL'] >= self.signalsConfig['SELL_MIN_CONFIDENCE']:
+        elif currentMode == 'SELL' and forecast['SELL'] >= self.exchangeConfig['SELL_MIN_CONFIDENCE']:
             #print(currentPrice * (1.0 + float(self.signalsConfig['ORDER_REWARD_PERCENT'])))
-            self.exchangeInstance.placeOrder('SELL', currentPrice * (1.0 + float(self.signalsConfig['ORDER_REWARD_PERCENT'])), 1.0)
+            self.exchangeInstance.placeOrder('SELL', self.getNextOrderPrice('SELL'), 1.0)
             self.setMode('WAIT')
         elif currentMode == 'HOLD':
             pass
@@ -263,27 +290,39 @@ class BotEntrypointClass:
 
     def startBot(self):
         self.sendMessage('OK', 'Bot has been launched', {})
+
         # at once
         self.getAllLogMessages()
+        if 'START_ORDER_PRICE' in self.exchangeConfig.keys() and self.exchangeConfig['START_ORDER_PRICE'] > 0:
+            self.setLastOrderPrice(self.exchangeConfig['START_ORDER_PRICE'])
+        else:
+            currentMarketData = self.exchangeInstance.getMarketData(self.exchangeConfig['COIN'])
+            currentPrice = currentMarketData['price']
+            self.setLastOrderPrice(currentPrice)
 
+        #print(self.getLastOrderPrice())
         # todo: условия что все ок
         while True:
             self.getAllLogMessages()
 
-            # exchange -> bot
-            currentMarketData = self.exchangeInstance.getMarketData('ETH')
+            # exchange (market data, check order) -> bot
+            currentMarketData = self.exchangeInstance.getMarketData(self.exchangeConfig['COIN'])
             if currentMarketData is None:
                 # todo test/prod
-                self.sendMessage('ERROR', 'Exchange response error. Stop bot', {})
-                self.__del__()
+                print('ERROR', 'Exchange response error. Stop bot', {})
+                break
+                #self.__del__()
 
-            #print(currentMarketData)
             currentPrice, currentTime = currentMarketData['price'], currentMarketData['time']
             commonForecast = []
 
+            #todo: здесь должна считаться и меняться цена, по которой хотим купить или продать
+            # в makeDecision нужно только передавать текущую цену и результат.
+            # ордер ставится при достижении нужной цены - как отложить действие?
+
             # bot -> signal -> bot
             for signal in self.signals:
-                signalAnswer = signal.getWeightedForecast(currentTime)
+                signalAnswer = signal.getWeightedForecast(currentPrice, currentTime)
                 # self.sendMessage('DEBUG', 'signalAnswer', {
                 #     'currentPrice': currentPrice,
                 #     'currentTime': currentTime,
@@ -292,13 +331,14 @@ class BotEntrypointClass:
 
                 commonForecast.append(signalAnswer)
 
-            # todo: надо учесть лаг на расчеты
+            # todo: надо учесть лаг на расчеты?
             # todo: blockers-modificators (сначала подключаем все? тут просто вызываем)
 
             aggregatedAnswer = self.aggregateAnswer(commonForecast)
 
             # bot -> exchange
-            self.makeDecision(currentPrice, currentTime, aggregatedAnswer)
+            self.makeDecision(aggregatedAnswer)
+            #currentTime,
 
             time.sleep(0.01)
             #time.sleep(int(os.environ['SLEEP_DURATION']))

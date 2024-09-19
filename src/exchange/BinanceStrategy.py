@@ -15,7 +15,7 @@ class BinanceStrategy(exchangeAbstractClass):
     def getMarketData(self, symbol):
         pass
 
-    def cancelOder(self, orderId):
+    def cancelOrder(self, orderId):
         pass
 
     def checkOrder(self, orderId):

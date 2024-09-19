@@ -18,10 +18,11 @@ class TestStrategy(exchangeAbstractClass):
     waitedTicks = 'TEST_WAITED'
 
     def connect(self):
-        self.sendMessage('INFO', 'TestStrategy has chosen', {})
+        self.sendMessage('INFO', 'Test Exchange has chosen', {})
         self.session = Elasticsearch(os.environ['ELASTICSEARCH_HOST'])
 
         self.cache.delete(self.currentOrderIdKey)
+        self.cache.setKeyValue(self.feeSumKey, 0)
 
         # sorted history of market
         index = "daily_" + self.config['COIN'].lower()
@@ -34,8 +35,8 @@ class TestStrategy(exchangeAbstractClass):
                          self.marketSequence[self.config['START_SEQUENCE_DAY']]['_id'] +
                          ' to ' + self.marketSequence[self.config['END_SEQUENCE_DAY']]['_id'],
                     {
-                        'START_PRICE': self.marketSequence[self.config['START_SEQUENCE_DAY']]['_source']['avgPrice'],
-                        'END_PRICE': self.marketSequence[self.config['END_SEQUENCE_DAY']]['_source']['avgPrice']
+                        'START_PRICE': self.marketSequence[self.config['START_SEQUENCE_DAY']]['_source']['openPrice'],
+                        'END_PRICE': self.marketSequence[self.config['END_SEQUENCE_DAY']]['_source']['openPrice']
                     })
 
         self.marketSequence = self.marketSequence[self.config['START_SEQUENCE_DAY']:self.config['END_SEQUENCE_DAY']]
@@ -69,6 +70,9 @@ class TestStrategy(exchangeAbstractClass):
                     'ORDER_PRICE': price,
                     'AMOUNT_PERCENT': amountPercent
             })
+
+        # if orderId == 2:
+        #     exit()
 
         return orderId
 
@@ -111,7 +115,7 @@ class TestStrategy(exchangeAbstractClass):
                 yield {'price': price, 'time': time}
                 next(iter(currentDayPrices))
 
-    def cancelOder(self, orderId):
+    def cancelOrder(self, orderId):
         pass
 
     def checkOrder(self, orderId):
@@ -128,6 +132,7 @@ class TestStrategy(exchangeAbstractClass):
         deposit = float(self.cache.getKeyValue(self.balanceKeyPrefix + self.config['STABLECOIN']))
         feeSum = self.cache.getKeyValue(self.feeSumKey)
         feeSum = 0 if feeSum is None else float(feeSum)
+        feeCurrent = 0
         fee = float(self.config['FEE'])
         waited = int(self.cache.getKeyValue(self.waitedTicks))
 
@@ -144,25 +149,40 @@ class TestStrategy(exchangeAbstractClass):
                 'CONDITION': (currentPrice <= currentOrderPrice) if currentOrderType == "BUY" else (currentPrice >= currentOrderPrice),
                 'WAITED': waited,
                 'STABLECOIN_AMOUNT': deposit,
-                'COIN_AMOUNT': coinAmount
+                'COIN_AMOUNT': coinAmount,
+                'FEE_SUM': feeSum
             })
 
         if currentOrderType == "BUY":
             if currentPrice <= currentOrderPrice and self.checkCandle(deposit):
-                deposit = 0.99 * deposit
-                coinAmount = coinAmount + (deposit / currentOrderPrice)
-                feeSum += deposit * fee
+                deposit = deposit
+                coinAmount = (deposit / currentOrderPrice)
+                # imitation of work with the current price (bot transmits it)
+                #coinAmount = (deposit / currentPrice)
+                #currentOrderPrice = currentPrice
+
+                feeCurrent = deposit * fee
+                feeSum += feeCurrent
                 deposit = 0 # deposit - coinAmount * currentOrderPrice
                 isComplete = True
 
-                self.sendMessage('OK', 'Buy-order completed, price = ' + str(currentOrderPrice), {})
+                self.sendMessage('OK', 'Buy-order completed, price = ' + str(currentOrderPrice) + ', balance: ' +
+                                 str(deposit) + ' $,' + str(coinAmount) + ' coin', {})
         elif currentOrderType == "SELL":
             if currentPrice >= currentOrderPrice and self.checkCandle(deposit):
-                deposit = deposit + coinAmount * currentOrderPrice
-                feeSum += coinAmount * currentOrderPrice * fee
+                #deposit = deposit + coinAmount * currentOrderPrice
+                # imitation of work with the current price (bot transmits it)
+                #deposit = coinAmount * currentPrice
+                deposit = coinAmount * currentOrderPrice
+                #currentOrderPrice = currentPrice
+
+                feeCurrent = deposit * fee
+                #feeSum += coinAmount * currentOrderPrice * fee
+                feeSum += deposit * fee
                 coinAmount = 0
 
-                self.sendMessage('OK', 'Sell-order completed, price = ' + str(currentOrderPrice), {})
+                self.sendMessage('OK', 'Sell-order completed, price = ' + str(currentOrderPrice) + ', balance: ' +
+                                 str(deposit) + ' $,' + str(coinAmount) + ' coin', {})
                 isComplete = True
 
         # create event, refresh cache
@@ -182,7 +202,8 @@ class TestStrategy(exchangeAbstractClass):
                     'ORDER_TYPE': currentOrderType,
                     'ORDER_PRICE': currentOrderPrice,
                     'COIN_AMOUNT': coinAmount,
-                    'STABLECOIN_AMOUNT': deposit,
+                    'DEPOSIT': deposit,
+                    'FEE': feeCurrent,
                     'FEE_SUM': feeSum
                 }
             )
